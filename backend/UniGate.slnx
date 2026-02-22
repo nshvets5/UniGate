@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/UniGate.Api/UniGate.Api.csproj" />
+    <Project Path="src/UniGate.SharedKernel/UniGate.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Iam/">
+    <Project Path="src/Modules/Iam/UniGate.Iam.Application/UniGate.Iam.Application.csproj" />
+    <Project Path="src/Modules/Iam/UniGate.Iam.Domain/UniGate.Iam.Domain.csproj" />
+    <Project Path="src/Modules/Iam/UniGate.Iam.Infrastructure/UniGate.Iam.Infrastructure.csproj" />
+  </Folder>
+</Solution>

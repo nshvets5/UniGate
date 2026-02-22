@@ -1,0 +1,21 @@
+{
+  "realm": "unigate",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      { "name": "Admin" },
+      { "name": "Security" },
+      { "name": "Teacher" },
+      { "name": "Student" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "unigate-api",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": true
+    }
+  ]
+}

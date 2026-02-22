@@ -1,0 +1,78 @@
+# Build
+bin/
+obj/
+out/
+publish/
+artifacts/
+
+# Logs
+*.log
+logs/
+
+# Test results / coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+
+# Runtime
+*.runtimeconfig.dev.json
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.Development.json
+appsettings.Local.json
+
+# Docker
+docker-compose.override.yml
+*.tar
+*.pid
+docker-data/
+postgres-data/
+pgdata/
+keycloak-data/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp
+*.tmp
+*.temp
+*.cache
+*.bak
+*.orig
