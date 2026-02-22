@@ -11,4 +11,8 @@
     <ProjectReference Include="..\UniGate.Iam.Domain\UniGate.Iam.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Abstractions\" />
+  </ItemGroup>
+
 </Project>

@@ -10,6 +10,9 @@ builder.Services
     .AddAppAuthentication(builder.Configuration)
     .AddAppAuthorization();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<UniGate.SharedKernel.Auth.ICurrentUser, UniGate.Api.Auth.HttpCurrentUser>();
+
 var app = builder.Build();
 
 app.UseSwagger();
