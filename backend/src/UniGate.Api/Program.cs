@@ -15,7 +15,10 @@ builder.Services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
-builder.Services.AddIamModule();
+
+builder.Services.AddSingleton<IIdentityProvider, ConfigIdentityProvider>();
+
+builder.Services.AddIamModule(builder.Configuration);
 
 builder.Services
     .AddAppAuthentication(builder.Configuration)
@@ -25,8 +28,11 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

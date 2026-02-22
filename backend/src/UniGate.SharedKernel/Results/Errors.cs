@@ -20,5 +20,8 @@ public static class Errors
     {
         public static readonly Error Misconfigured =
             new("infra.misconfigured", "Required configuration is missing or invalid.");
+
+        public static readonly Error DatabaseFailure =
+            new("infra.database_failure", "Database operation failed.");
     }
 }

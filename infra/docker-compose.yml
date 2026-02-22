@@ -34,7 +34,7 @@ services:
       - keycloak-db
 
   unigate-db:
-    image: postgres:16
+    image: postgres:17
     container_name: unigate-db
     environment:
       POSTGRES_DB: ${UG_DB_NAME}
