@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using UniGate.Api.Errors;
 using UniGate.SharedKernel.Results;
 
 namespace UniGate.Api.Controllers.Base;
@@ -6,6 +7,13 @@ namespace UniGate.Api.Controllers.Base;
 [ApiController]
 public abstract class ApiControllerBase : ControllerBase
 {
+    private readonly IApiErrorMapper _errorMapper;
+
+    protected ApiControllerBase(IApiErrorMapper errorMapper)
+    {
+        _errorMapper = errorMapper;
+    }
+
     protected IActionResult ToActionResult(Result result)
         => result.IsSuccess ? NoContent() : ToProblem(result.Error);
 
@@ -14,7 +22,7 @@ public abstract class ApiControllerBase : ControllerBase
 
     protected IActionResult ToProblem(Error error)
     {
-        var (status, type) = MapError(error);
+        var (status, type) = _errorMapper.Map(error);
 
         return Problem(
             type: type,
@@ -25,19 +33,5 @@ public abstract class ApiControllerBase : ControllerBase
             {
                 ["traceId"] = HttpContext.TraceIdentifier
             });
-    }
-
-    private static (int Status, string Type) MapError(Error error)
-    {
-        if (error.Code.StartsWith("auth."))
-            return (StatusCodes.Status401Unauthorized, "https://httpstatuses.com/401");
-
-        if (error.Code.StartsWith("validation."))
-            return (StatusCodes.Status400BadRequest, "https://httpstatuses.com/400");
-
-        if (error.Code.StartsWith("infra."))
-            return (StatusCodes.Status500InternalServerError, "https://httpstatuses.com/500");
-
-        return (StatusCodes.Status400BadRequest, "https://httpstatuses.com/400");
     }
 }

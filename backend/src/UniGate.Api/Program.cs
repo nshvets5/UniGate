@@ -1,4 +1,8 @@
+using UniGate.Api.Auth;
+using UniGate.Api.Errors;
 using UniGate.Api.Extensions;
+using UniGate.Api.Middleware;
+using UniGate.SharedKernel.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,14 +10,18 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+
 builder.Services
     .AddAppAuthentication(builder.Configuration)
     .AddAppAuthorization();
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<UniGate.SharedKernel.Auth.ICurrentUser, UniGate.Api.Auth.HttpCurrentUser>();
-
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI();
