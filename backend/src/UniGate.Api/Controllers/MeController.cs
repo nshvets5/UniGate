@@ -1,26 +1,24 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using UniGate.Api.Controllers.Base;
+using UniGate.Api.Errors;
+using UniGate.Iam.Application.UseCases.GetCurrentUser;
 
 namespace UniGate.Api.Controllers;
 
-[ApiController]
 [Route("api/me")]
-public class MeController : ControllerBase
+public sealed class MeController : ApiControllerBase
 {
+    private readonly GetCurrentUserUseCase _useCase;
+
+    public MeController(GetCurrentUserUseCase useCase, IApiErrorMapper errorMapper)
+        : base(errorMapper)
+    {
+        _useCase = useCase;
+    }
+
     [HttpGet]
     [Authorize]
     public IActionResult Get()
-    {
-        var user = HttpContext.User;
-
-        return Ok(new
-        {
-            sub = user.FindFirstValue("sub"),
-            email = user.FindFirstValue("email"),
-            roles = user.Claims
-                .Where(c => c.Type == ClaimTypes.Role)
-                .Select(c => c.Value)
-        });
-    }
+        => ToActionResult(_useCase.Execute());
 }
