@@ -32,12 +32,15 @@ public sealed class ExceptionHandlingMiddleware
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             context.Response.ContentType = "application/problem+json";
 
+            var correlationId = context.Items.TryGetValue("X-Correlation-Id", out var cid) ? cid?.ToString() : null;
+
             var payload = new
             {
                 type = "https://httpstatuses.com/500",
                 title = "Internal Server Error",
                 status = 500,
-                traceId
+                traceId = context.TraceIdentifier,
+                correlationId
             };
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(payload));

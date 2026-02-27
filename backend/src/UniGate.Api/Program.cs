@@ -4,6 +4,7 @@ using UniGate.Api.Errors;
 using UniGate.Api.Extensions;
 using UniGate.Api.HealthChecks;
 using UniGate.Api.Middleware;
+using UniGate.Api.Observability;
 using UniGate.Api.Swagger;
 using UniGate.Iam.Infrastructure.DependencyInjection;
 using UniGate.Iam.Infrastructure.Persistence;
@@ -44,6 +45,9 @@ builder.Services
     .AddAppAuthorization();
 
 var app = builder.Build();
+
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<RequestLoggingScopeMiddleware>();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
