@@ -4,6 +4,7 @@ using UniGate.Api.Errors;
 using UniGate.Api.Extensions;
 using UniGate.Api.HealthChecks;
 using UniGate.Api.Middleware;
+using UniGate.Api.Swagger;
 using UniGate.Iam.Infrastructure.DependencyInjection;
 using UniGate.Iam.Infrastructure.Persistence;
 using UniGate.SharedKernel.Auth;
@@ -12,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddAppSwagger();
 
 builder.Services.AddHttpClient("health", client =>
 {
