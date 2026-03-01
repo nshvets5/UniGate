@@ -33,6 +33,7 @@ public static class IamModuleServiceCollectionExtensions
 
         services.AddScoped<GetCurrentUserUseCase>();
         services.AddScoped<EnsureMyProfileUseCase>();
+        services.AddScoped<UniGate.Iam.Infrastructure.Outbox.IOutboxReader, UniGate.Iam.Infrastructure.Outbox.EfOutboxReader>();
 
         return services;
     }

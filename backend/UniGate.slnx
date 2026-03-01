@@ -4,6 +4,11 @@
     <Project Path="src/UniGate.SharedKernel/UniGate.SharedKernel.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Audit/">
+    <Project Path="src/Modules/Audit/UniGate.Audit.Application/UniGate.Audit.Application.csproj" Id="00d072a4-6f5b-458b-b135-6ab9cda98589" />
+    <Project Path="src/Modules/Audit/UniGate.Audit.Domain/UniGate.Audit.Domain.csproj" Id="91463e29-47d1-4b81-976b-7908fb3297d9" />
+    <Project Path="src/Modules/Audit/UniGate.Audit.Infrastructure/UniGate.Audit.Infrastructure.csproj" Id="35af0c5a-f6ba-4f46-99f5-24d31fc0717c" />
+  </Folder>
   <Folder Name="/src/Modules/Iam/">
     <Project Path="src/Modules/Iam/UniGate.Iam.Application/UniGate.Iam.Application.csproj" />
     <Project Path="src/Modules/Iam/UniGate.Iam.Domain/UniGate.Iam.Domain.csproj" />

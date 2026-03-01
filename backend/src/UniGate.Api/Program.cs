@@ -8,6 +8,8 @@ using UniGate.Api.Observability;
 using UniGate.Api.Swagger;
 using UniGate.Iam.Infrastructure.DependencyInjection;
 using UniGate.Iam.Infrastructure.Persistence;
+using UniGate.Audit.Infrastructure.DependencyInjection;
+using UniGate.Audit.Infrastructure.Persistence;
 using UniGate.SharedKernel.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +28,10 @@ builder.Services.AddHealthChecks()
         name: "db",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
         tags: new[] { "ready" })
+    .AddDbContextCheck<AuditDbContext>
+        (name: "audit_db",
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
+        tags: new[] { "ready" })
     .AddCheck<KeycloakDiscoveryHealthCheck>(
         name: "keycloak",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
@@ -35,10 +41,14 @@ builder.Services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddScoped<UniGate.SharedKernel.Observability.IRequestContext, UniGate.Api.Observability.HttpRequestContext>();
 
 builder.Services.AddSingleton<IIdentityProvider, ConfigIdentityProvider>();
 
 builder.Services.AddIamModule(builder.Configuration);
+builder.Services.AddAuditModule(builder.Configuration);
+
+builder.Services.AddHostedService<UniGate.Api.Outbox.OutboxProcessorHostedService>();
 
 builder.Services
     .AddAppAuthentication(builder.Configuration)
