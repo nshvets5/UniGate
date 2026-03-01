@@ -27,4 +27,6 @@ public sealed class Group
     public void ChangeCode(string code) => Code = code;
 
     public void SetActive(bool isActive) => IsActive = isActive;
+
+    public void SetAdmissionYear(int year) => AdmissionYear = year;
 }

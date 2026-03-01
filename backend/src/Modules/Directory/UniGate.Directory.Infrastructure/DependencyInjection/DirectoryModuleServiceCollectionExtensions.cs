@@ -30,6 +30,9 @@ public static class DirectoryModuleServiceCollectionExtensions
         services.AddScoped<IGroupStore, EfGroupStore>();
         services.AddScoped<CreateGroupUseCase>();
         services.AddScoped<ListGroupsUseCase>();
+        services.AddScoped<GetGroupByIdUseCase>();
+        services.AddScoped<UpdateGroupUseCase>();
+        services.AddScoped<SetGroupActiveUseCase>();
 
         return services;
     }

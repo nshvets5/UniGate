@@ -78,4 +78,85 @@ public sealed class EfGroupStore : IGroupStore
             return Result<PagedResult<GroupDto>>.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }
+
+    public async Task<Result<GroupDto>> GetByIdAsync(GetGroupByIdQuery query, CancellationToken ct = default)
+    {
+        try
+        {
+            var g = await _db.Groups.AsNoTracking()
+                .Where(x => x.Id == query.Id)
+                .Select(x => new GroupDto(x.Id, x.Code, x.Name, x.AdmissionYear, x.IsActive, x.CreatedAt))
+                .FirstOrDefaultAsync(ct);
+
+            return g is null
+                ? Result<GroupDto>.Failure(DirectoryErrors.Groups.NotFound)
+                : Result<GroupDto>.Success(g);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get group id={Id}", query.Id);
+            return Result<GroupDto>.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+    }
+
+    public async Task<Result> UpdateAsync(UpdateGroupCommand cmd, CancellationToken ct = default)
+    {
+        try
+        {
+            var group = await _db.Groups.FirstOrDefaultAsync(x => x.Id == cmd.Id, ct);
+            if (group is null)
+                return Result.Failure(DirectoryErrors.Groups.NotFound);
+
+            var newCode = cmd.Code.Trim();
+            if (!string.Equals(group.Code, newCode, StringComparison.OrdinalIgnoreCase))
+            {
+                var exists = await _db.Groups.AsNoTracking().AnyAsync(x => x.Code == newCode && x.Id != cmd.Id, ct);
+                if (exists)
+                    return Result.Failure(DirectoryErrors.Groups.DuplicateCode);
+
+                group.ChangeCode(newCode);
+            }
+
+            group.Rename(cmd.Name.Trim());
+            group.SetAdmissionYear(cmd.AdmissionYear);
+
+            await _db.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(ex, "DbUpdateException while updating group id={Id}", cmd.Id);
+            return Result.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while updating group id={Id}", cmd.Id);
+            return Result.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+    }
+
+    public async Task<Result> SetActiveAsync(SetGroupActiveCommand cmd, CancellationToken ct = default)
+    {
+        try
+        {
+            var group = await _db.Groups.FirstOrDefaultAsync(x => x.Id == cmd.Id, ct);
+            if (group is null)
+                return Result.Failure(DirectoryErrors.Groups.NotFound);
+
+            group.SetActive(cmd.IsActive);
+            await _db.SaveChangesAsync(ct);
+
+            return Result.Success();
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(ex, "DbUpdateException while setting group active id={Id}", cmd.Id);
+            return Result.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while setting group active id={Id}", cmd.Id);
+            return Result.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+    }
 }
