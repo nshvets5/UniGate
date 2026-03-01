@@ -4,8 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using UniGate.Iam.Application.Abstractions;
 using UniGate.Iam.Application.UseCases.EnsureMyProfile;
 using UniGate.Iam.Application.UseCases.GetCurrentUser;
+using UniGate.Iam.Infrastructure.Outbox;
 using UniGate.Iam.Infrastructure.Persistence;
+using UniGate.Iam.Infrastructure.Queries;
 using UniGate.Iam.Infrastructure.Stores;
+using UniGate.SharedKernel.Auth;
 
 namespace UniGate.Iam.Infrastructure.DependencyInjection;
 
@@ -33,7 +36,9 @@ public static class IamModuleServiceCollectionExtensions
 
         services.AddScoped<GetCurrentUserUseCase>();
         services.AddScoped<EnsureMyProfileUseCase>();
-        services.AddScoped<UniGate.Iam.Infrastructure.Outbox.IOutboxReader, UniGate.Iam.Infrastructure.Outbox.EfOutboxReader>();
+        services.AddScoped<IOutboxReader, EfOutboxReader>();
+
+        services.AddScoped<IProfileLookup, EfProfileLookup>();
 
         return services;
     }

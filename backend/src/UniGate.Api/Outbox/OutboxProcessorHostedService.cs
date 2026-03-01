@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using UniGate.Audit.Infrastructure.Persistence;
 using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Iam.Infrastructure.Outbox;
+using UniGate.SharedKernel.Auth;
 using UniGate.SharedKernel.Outbox;
 
 
@@ -20,9 +21,9 @@ public sealed class OutboxProcessorHostedService : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             try
             {
@@ -30,23 +31,24 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                 var reader = scope.ServiceProvider.GetRequiredService<IOutboxReader>();
                 var auditDb = scope.ServiceProvider.GetRequiredService<AuditDbContext>();
                 var directoryDb = scope.ServiceProvider.GetRequiredService<DirectoryDbContext>();
+                var profileLookup = scope.ServiceProvider.GetRequiredService<IProfileLookup>();
 
-                var batch = await reader.DequeueBatchAsync(batchSize: 20, stoppingToken);
+                var batch = await reader.DequeueBatchAsync(batchSize: 20, ct);
 
                 if (batch.Count == 0)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(2), ct);
                     continue;
                 }
 
                 foreach (var msg in batch)
                 {
-                    if (stoppingToken.IsCancellationRequested) break;
+                    if (ct.IsCancellationRequested) break;
 
                     try
                     {
-                        await ProcessMessageAsync(msg, auditDb, directoryDb, stoppingToken);
-                        await reader.MarkProcessedAsync(msg.Id, stoppingToken);
+                        await ProcessMessageAsync(msg, auditDb, directoryDb, profileLookup, ct);
+                        await reader.MarkProcessedAsync(msg.Id, ct);
                     }
                     catch (Exception ex)
                     {
@@ -55,14 +57,14 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                             await reader.MarkDeadLetterAsync(
                                 msg.Id,
                                 reason: $"Max attempts reached. Last error: {ex.Message}",
-                                stoppingToken);
+                                ct);
 
                             _logger.LogError(ex, "Dead-lettered outbox message {MessageId} type={Type}", msg.Id, msg.Type);
                         }
                         else
                         {
                             var delay = TimeSpan.FromSeconds(Math.Min(60, 2 + msg.Attempts * 5));
-                            await reader.MarkFailedAsync(msg.Id, ex.Message, delay, stoppingToken);
+                            await reader.MarkFailedAsync(msg.Id, ex.Message, delay, ct);
                         }
                     }
                 }
@@ -70,7 +72,7 @@ public sealed class OutboxProcessorHostedService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Outbox processor loop error");
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(5), ct);
             }
         }
     }
@@ -79,6 +81,7 @@ public sealed class OutboxProcessorHostedService : BackgroundService
         OutboxMessage msg,
         AuditDbContext auditDb,
         DirectoryDbContext directoryDb,
+        IProfileLookup profileLookup,
         CancellationToken ct)
     {
         if (msg.Type == "iam.user_profile_provisioned")
@@ -172,6 +175,12 @@ public sealed class OutboxProcessorHostedService : BackgroundService
 
         if (msg.Type.StartsWith("directory.student_", StringComparison.Ordinal))
         {
+            if (msg.Type is UniGate.SharedKernel.Outbox.DirectoryOutboxTypes.StudentCreated
+                 or UniGate.SharedKernel.Outbox.DirectoryOutboxTypes.StudentUpdated)
+            {
+                await TryBindProfileForStudentEventAsync(msg, directoryDb, profileLookup, ct);
+            }
+
             using var doc = JsonDocument.Parse(msg.PayloadJson);
             var root = doc.RootElement;
 
@@ -264,6 +273,66 @@ public sealed class OutboxProcessorHostedService : BackgroundService
             payloadJson: payload,
             correlationId: correlationId,
             traceId: traceId));
+
+        await directoryDb.SaveChangesAsync(ct);
+    }
+
+    private static async Task TryBindProfileForStudentEventAsync(
+        OutboxMessage msg,
+        DirectoryDbContext directoryDb,
+        IProfileLookup profileLookup,
+        CancellationToken ct)
+    {
+        using var doc = JsonDocument.Parse(msg.PayloadJson);
+        var root = doc.RootElement;
+
+        var studentId = root.GetProperty("studentId").GetGuid();
+
+        var email = root.TryGetProperty("Email", out var em) ? em.GetString() : null;
+        if (string.IsNullOrWhiteSpace(email))
+            return;
+
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+
+        var student = await directoryDb.Students.FirstOrDefaultAsync(x => x.Id == studentId, ct);
+        if (student is null)
+            return;
+
+        if (student.IamProfileId is not null)
+            return;
+
+        var lookup = await profileLookup.FindProfileIdByEmailAsync(normalizedEmail, ct);
+        if (!lookup.IsSuccess)
+            throw new InvalidOperationException($"Profile lookup failed: {lookup.Error.Code}");
+
+        if (lookup.Value is not Guid profileId)
+            return;
+
+        student.BindIamProfile(profileId);
+
+        var actorProvider = root.TryGetProperty("actorProvider", out var ap) ? ap.GetString() : null;
+        var actorSubject = root.TryGetProperty("actorSubject", out var asu) ? asu.GetString() : null;
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            studentId = student.Id,
+            student.GroupId,
+            student.FirstName,
+            student.LastName,
+            student.MiddleName,
+            student.Email,
+            student.IamProfileId,
+            student.IsActive,
+            actorProvider,
+            actorSubject,
+            occurredAt = DateTimeOffset.UtcNow
+        });
+
+        directoryDb.OutboxMessages.Add(new OutboxMessage(
+            type: DirectoryOutboxTypes.StudentProfileBound,
+            payloadJson: payload,
+            correlationId: msg.CorrelationId,
+            traceId: msg.TraceId));
 
         await directoryDb.SaveChangesAsync(ct);
     }
