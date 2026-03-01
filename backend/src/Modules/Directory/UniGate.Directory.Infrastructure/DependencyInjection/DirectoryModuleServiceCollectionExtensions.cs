@@ -9,6 +9,7 @@ using UniGate.Directory.Application.Students.UseCases;
 using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Directory.Infrastructure.Queries;
 using UniGate.Directory.Infrastructure.Stores;
+using UniGate.SharedKernel.Directory;
 
 namespace UniGate.Directory.Infrastructure.DependencyInjection;
 
@@ -51,6 +52,7 @@ public static class DirectoryModuleServiceCollectionExtensions
 
         services.AddScoped<IMyDirectoryQuery, EfMyDirectoryQuery>();
         services.AddScoped<GetMyStudentUseCase>();
+        services.AddScoped<IStudentLookup, EfStudentLookup>();
 
         return services;
     }

@@ -4,6 +4,11 @@
     <Project Path="src/UniGate.SharedKernel/UniGate.SharedKernel.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Access/">
+    <Project Path="src/Modules/Access/UniGate.Access.Application/UniGate.Access.Application.csproj" Id="d352d6b1-c43e-47dc-8cd9-6b4c0aedb569" />
+    <Project Path="src/Modules/Access/UniGate.Access.Domain/UniGate.Access.Domain.csproj" Id="cd60ced2-febd-431a-9baf-9e07ec0a218b" />
+    <Project Path="src/Modules/Access/UniGate.Access.Infrastructure/UniGate.Access.Infrastructure.csproj" Id="fe25a925-a12d-47a0-9afe-72a97a1af0b8" />
+  </Folder>
   <Folder Name="/src/Modules/Audit/">
     <Project Path="src/Modules/Audit/UniGate.Audit.Application/UniGate.Audit.Application.csproj" Id="00d072a4-6f5b-458b-b135-6ab9cda98589" />
     <Project Path="src/Modules/Audit/UniGate.Audit.Domain/UniGate.Audit.Domain.csproj" Id="91463e29-47d1-4b81-976b-7908fb3297d9" />
