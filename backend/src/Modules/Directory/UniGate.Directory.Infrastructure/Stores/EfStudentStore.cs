@@ -58,7 +58,7 @@ public sealed class EfStudentStore : IStudentStore
             _db.Students.Add(st);
 
             _db.OutboxMessages.Add(new OutboxMessage(
-                type: StudentOutboxTypes.StudentCreated,
+                type: DirectoryOutboxTypes.StudentCreated,
                 payloadJson: BuildPayload(st),
                 correlationId: _requestContext.CorrelationId,
                 traceId: _requestContext.TraceId));
@@ -162,7 +162,7 @@ public sealed class EfStudentStore : IStudentStore
             st.Rename(cmd.FirstName.Trim(), cmd.LastName.Trim(), string.IsNullOrWhiteSpace(cmd.MiddleName) ? null : cmd.MiddleName.Trim());
 
             _db.OutboxMessages.Add(new OutboxMessage(
-                type: StudentOutboxTypes.StudentUpdated,
+                type: DirectoryOutboxTypes.StudentUpdated,
                 payloadJson: BuildPayload(st),
                 correlationId: _requestContext.CorrelationId,
                 traceId: _requestContext.TraceId));
@@ -193,7 +193,7 @@ public sealed class EfStudentStore : IStudentStore
             st.SetActive(cmd.IsActive);
 
             _db.OutboxMessages.Add(new OutboxMessage(
-                type: StudentOutboxTypes.StudentActiveChanged,
+                type: DirectoryOutboxTypes.StudentActiveChanged,
                 payloadJson: BuildPayload(st),
                 correlationId: _requestContext.CorrelationId,
                 traceId: _requestContext.TraceId));
@@ -223,7 +223,7 @@ public sealed class EfStudentStore : IStudentStore
             st.ChangeGroup(cmd.GroupId);
 
             _db.OutboxMessages.Add(new OutboxMessage(
-                type: StudentOutboxTypes.StudentGroupChanged,
+                type: DirectoryOutboxTypes.StudentGroupChanged,
                 payloadJson: BuildPayload(st),
                 correlationId: _requestContext.CorrelationId,
                 traceId: _requestContext.TraceId));
@@ -249,7 +249,7 @@ public sealed class EfStudentStore : IStudentStore
             st.BindIamProfile(cmd.IamProfileId);
 
             _db.OutboxMessages.Add(new OutboxMessage(
-                type: StudentOutboxTypes.StudentProfileBound,
+                type: DirectoryOutboxTypes.StudentProfileBound,
                 payloadJson: BuildPayload(st),
                 correlationId: _requestContext.CorrelationId,
                 traceId: _requestContext.TraceId));

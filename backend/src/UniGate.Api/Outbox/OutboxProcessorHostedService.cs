@@ -1,8 +1,10 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using UniGate.Audit.Infrastructure.Persistence;
+using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Iam.Infrastructure.Outbox;
 using UniGate.SharedKernel.Outbox;
+
 
 namespace UniGate.Api.Outbox;
 
@@ -27,6 +29,7 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                 using var scope = _sp.CreateScope();
                 var reader = scope.ServiceProvider.GetRequiredService<IOutboxReader>();
                 var auditDb = scope.ServiceProvider.GetRequiredService<AuditDbContext>();
+                var directoryDb = scope.ServiceProvider.GetRequiredService<DirectoryDbContext>();
 
                 var batch = await reader.DequeueBatchAsync(batchSize: 20, stoppingToken);
 
@@ -42,7 +45,7 @@ public sealed class OutboxProcessorHostedService : BackgroundService
 
                     try
                     {
-                        await ProcessMessageAsync(msg, auditDb, stoppingToken);
+                        await ProcessMessageAsync(msg, auditDb, directoryDb, stoppingToken);
                         await reader.MarkProcessedAsync(msg.Id, stoppingToken);
                     }
                     catch (Exception ex)
@@ -72,7 +75,11 @@ public sealed class OutboxProcessorHostedService : BackgroundService
         }
     }
 
-    private static async Task ProcessMessageAsync(OutboxMessage msg, AuditDbContext auditDb, CancellationToken ct)
+    private static async Task ProcessMessageAsync(
+        OutboxMessage msg,
+        AuditDbContext auditDb,
+        DirectoryDbContext directoryDb,
+        CancellationToken ct)
     {
         if (msg.Type == "iam.user_profile_provisioned")
         {
@@ -107,6 +114,20 @@ public sealed class OutboxProcessorHostedService : BackgroundService
             ));
 
             await auditDb.SaveChangesAsync(ct);
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                await TryAutoBindStudentProfileAsync(
+                    directoryDb: directoryDb,
+                    profileId: profileId,
+                    email: email!,
+                    actorProvider: provider,
+                    actorSubject: subject,
+                    correlationId: msg.CorrelationId,
+                    traceId: msg.TraceId,
+                    ct: ct);
+            }
+
             return;
         }
 
@@ -195,5 +216,55 @@ public sealed class OutboxProcessorHostedService : BackgroundService
         }
 
         throw new InvalidOperationException($"Unsupported outbox message type: {msg.Type}");
+    }
+
+    private static async Task TryAutoBindStudentProfileAsync(
+        DirectoryDbContext directoryDb,
+        Guid profileId,
+        string email,
+        string? actorProvider,
+        string? actorSubject,
+        string? correlationId,
+        string? traceId,
+        CancellationToken ct)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+
+        var student = await directoryDb.Students
+            .FirstOrDefaultAsync(x => x.Email == normalizedEmail, ct);
+
+        if (student is null)
+            return;
+
+        if (student.IamProfileId == profileId)
+            return;
+
+        if (student.IamProfileId is not null && student.IamProfileId != profileId)
+            return;
+
+        student.BindIamProfile(profileId);
+
+        var payload = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            studentId = student.Id,
+            student.GroupId,
+            student.FirstName,
+            student.LastName,
+            student.MiddleName,
+            student.Email,
+            student.IamProfileId,
+            student.IsActive,
+            actorProvider,
+            actorSubject,
+            occurredAt = DateTimeOffset.UtcNow
+        });
+
+        directoryDb.OutboxMessages.Add(new UniGate.SharedKernel.Outbox.OutboxMessage(
+            type: UniGate.SharedKernel.Outbox.DirectoryOutboxTypes.StudentProfileBound,
+            payloadJson: payload,
+            correlationId: correlationId,
+            traceId: traceId));
+
+        await directoryDb.SaveChangesAsync(ct);
     }
 }

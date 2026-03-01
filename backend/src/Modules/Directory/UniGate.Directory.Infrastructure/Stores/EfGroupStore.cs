@@ -60,7 +60,7 @@ public sealed class EfGroupStore : IGroupStore
             });
 
             _db.OutboxMessages.Add(new OutboxMessage(
-                type: GroupOutboxTypes.GroupCreated,
+                type: DirectoryOutboxTypes.GroupCreated,
                 payloadJson: payload,
                 correlationId: _requestContext.CorrelationId,
                 traceId: _requestContext.TraceId));
@@ -168,7 +168,7 @@ public sealed class EfGroupStore : IGroupStore
             });
 
             _db.OutboxMessages.Add(new OutboxMessage(
-                type: GroupOutboxTypes.GroupUpdated,
+                type: DirectoryOutboxTypes.GroupUpdated,
                 payloadJson: payload,
                 correlationId: _requestContext.CorrelationId,
                 traceId: _requestContext.TraceId));
@@ -211,7 +211,7 @@ public sealed class EfGroupStore : IGroupStore
             });
 
             _db.OutboxMessages.Add(new OutboxMessage(
-                type: GroupOutboxTypes.GroupActiveChanged,
+                type: DirectoryOutboxTypes.GroupActiveChanged,
                 payloadJson: payload,
                 correlationId: _requestContext.CorrelationId,
                 traceId: _requestContext.TraceId));
