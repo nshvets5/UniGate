@@ -35,6 +35,10 @@ builder.Services.AddHealthChecks()
     .AddCheck<KeycloakDiscoveryHealthCheck>(
         name: "keycloak",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
+        tags: new[] { "ready" })
+    .AddCheck<OutboxBacklogHealthCheck>(
+        name: "outbox_backlog",
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded,
         tags: new[] { "ready" });
 
 builder.Services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();

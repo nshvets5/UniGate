@@ -17,6 +17,7 @@ public sealed class EfOutboxReader : IOutboxReader
             select *
             from outbox.messages
             where ""ProcessedAt"" is null
+              and ""DeadLetteredAt"" is null
               and ""AvailableAt"" <= {0}
             order by ""OccurredAt""
             for update skip locked
@@ -43,6 +44,15 @@ public sealed class EfOutboxReader : IOutboxReader
         if (msg is null) return;
 
         msg.MarkFailed(error, retryDelay);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task MarkDeadLetterAsync(Guid messageId, string reason, CancellationToken ct)
+    {
+        var msg = await _db.OutboxMessages.FirstOrDefaultAsync(x => x.Id == messageId, ct);
+        if (msg is null) return;
+
+        msg.MarkDeadLetter(reason);
         await _db.SaveChangesAsync(ct);
     }
 }

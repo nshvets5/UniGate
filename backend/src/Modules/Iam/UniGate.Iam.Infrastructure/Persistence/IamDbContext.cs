@@ -64,7 +64,11 @@ public sealed class IamDbContext : DbContext
             b.Property(x => x.AvailableAt).IsRequired();
             b.Property(x => x.ProcessedAt);
 
-            b.HasIndex(x => new { x.ProcessedAt, x.AvailableAt });
+            b.Property(x => x.DeadLetteredAt);
+            b.Property(x => x.DeadLetterReason).HasMaxLength(2000);
+
+            b.HasIndex(x => new { x.ProcessedAt, x.DeadLetteredAt, x.AvailableAt });
+            b.HasIndex(x => x.DeadLetteredAt);
         });
 
     }

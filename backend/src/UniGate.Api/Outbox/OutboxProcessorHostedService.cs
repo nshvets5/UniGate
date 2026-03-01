@@ -9,6 +9,7 @@ public sealed class OutboxProcessorHostedService : BackgroundService
 {
     private readonly IServiceProvider _sp;
     private readonly ILogger<OutboxProcessorHostedService> _logger;
+    private const int MaxAttempts = 10;
 
     public OutboxProcessorHostedService(IServiceProvider sp, ILogger<OutboxProcessorHostedService> logger)
     {
@@ -45,10 +46,20 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed processing outbox message {MessageId} type={Type}", msg.Id, msg.Type);
+                        if (msg.Attempts + 1 >= MaxAttempts)
+                        {
+                            await reader.MarkDeadLetterAsync(
+                                msg.Id,
+                                reason: $"Max attempts reached. Last error: {ex.Message}",
+                                stoppingToken);
 
-                        var delay = TimeSpan.FromSeconds(Math.Min(60, 2 + msg.Attempts * 5));
-                        await reader.MarkFailedAsync(msg.Id, ex.Message, delay, stoppingToken);
+                            _logger.LogError(ex, "Dead-lettered outbox message {MessageId} type={Type}", msg.Id, msg.Type);
+                        }
+                        else
+                        {
+                            var delay = TimeSpan.FromSeconds(Math.Min(60, 2 + msg.Attempts * 5));
+                            await reader.MarkFailedAsync(msg.Id, ex.Message, delay, stoppingToken);
+                        }
                     }
                 }
             }

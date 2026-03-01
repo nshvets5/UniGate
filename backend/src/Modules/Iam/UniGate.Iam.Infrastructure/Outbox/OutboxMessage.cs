@@ -18,6 +18,9 @@ public sealed class OutboxMessage
     public DateTimeOffset AvailableAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ProcessedAt { get; private set; }
 
+    public DateTimeOffset? DeadLetteredAt { get; private set; }
+    public string? DeadLetterReason { get; private set; }
+
     private OutboxMessage() { }
 
     public OutboxMessage(
@@ -41,5 +44,11 @@ public sealed class OutboxMessage
         Attempts += 1;
         LastError = error;
         AvailableAt = DateTimeOffset.UtcNow.Add(retryDelay);
+    }
+
+    public void MarkDeadLetter(string reason)
+    {
+        DeadLetteredAt = DateTimeOffset.UtcNow;
+        DeadLetterReason = reason;
     }
 }
