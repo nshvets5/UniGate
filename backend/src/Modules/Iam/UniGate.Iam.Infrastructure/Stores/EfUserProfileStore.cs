@@ -6,6 +6,7 @@ using UniGate.Iam.Domain;
 using UniGate.Iam.Infrastructure.Outbox;
 using UniGate.Iam.Infrastructure.Persistence;
 using UniGate.SharedKernel.Observability;
+using UniGate.SharedKernel.Outbox;
 using UniGate.SharedKernel.Results;
 
 namespace UniGate.Iam.Infrastructure.Stores;

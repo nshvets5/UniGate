@@ -17,8 +17,6 @@ public sealed class GroupsController : ApiControllerBase
     private readonly UpdateGroupUseCase _update;
     private readonly SetGroupActiveUseCase _setActive;
 
-    public sealed record SetActiveRequest(bool IsActive);
-
     public GroupsController(
         CreateGroupUseCase create,
         ListGroupsUseCase list,
@@ -66,8 +64,9 @@ public sealed class GroupsController : ApiControllerBase
         return ToActionResult(await _update.ExecuteAsync(cmd, ct));
     }
 
+    public sealed record SetGroupActiveRequest(bool IsActive);
     [HttpPatch("{id:guid}/active")]
     [Authorize(Policy = DirectoryAuthorizationExtensions.DirectoryAdmin)]
-    public async Task<IActionResult> SetActive([FromRoute] Guid id, [FromBody] SetActiveRequest req, CancellationToken ct)
+    public async Task<IActionResult> SetActive([FromRoute] Guid id, [FromBody] SetGroupActiveRequest req, CancellationToken ct)
     => ToActionResult(await _setActive.ExecuteAsync(new SetGroupActiveCommand(id, req.IsActive), ct));
 }

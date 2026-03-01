@@ -9,6 +9,7 @@ public sealed class DirectoryDbContext : DbContext
     public DirectoryDbContext(DbContextOptions<DirectoryDbContext> options) : base(options) { }
 
     public DbSet<Group> Groups => Set<Group>();
+    public DbSet<Student> Students => Set<Student>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -29,6 +30,33 @@ public sealed class DirectoryDbContext : DbContext
             b.HasIndex(x => x.Code).IsUnique();
             b.HasIndex(x => x.Name);
             b.HasIndex(x => x.AdmissionYear);
+        });
+
+        modelBuilder.Entity<Student>(b =>
+        {
+            b.ToTable("students");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.GroupId).IsRequired();
+
+            b.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
+            b.Property(x => x.LastName).HasMaxLength(100).IsRequired();
+            b.Property(x => x.MiddleName).HasMaxLength(100);
+
+            b.Property(x => x.Email).HasMaxLength(200).IsRequired();
+            b.Property(x => x.IamProfileId);
+
+            b.Property(x => x.IsActive).IsRequired();
+            b.Property(x => x.CreatedAt).IsRequired();
+
+            b.HasIndex(x => x.Email).IsUnique();
+            b.HasIndex(x => x.GroupId);
+            b.HasIndex(x => new { x.LastName, x.FirstName });
+
+            b.HasOne<Group>()
+                .WithMany()
+                .HasForeignKey(x => x.GroupId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<OutboxMessage>(b =>

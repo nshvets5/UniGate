@@ -149,6 +149,51 @@ public sealed class OutboxProcessorHostedService : BackgroundService
             return;
         }
 
+        if (msg.Type.StartsWith("directory.student_", StringComparison.Ordinal))
+        {
+            using var doc = JsonDocument.Parse(msg.PayloadJson);
+            var root = doc.RootElement;
+
+            var studentId = root.GetProperty("studentId").GetGuid();
+            var groupId = root.GetProperty("GroupId").GetGuid();
+
+            var firstName = root.GetProperty("FirstName").GetString();
+            var lastName = root.GetProperty("LastName").GetString();
+            var email = root.GetProperty("Email").GetString();
+            var isActive = root.GetProperty("IsActive").GetBoolean();
+
+            var iamProfileId = root.TryGetProperty("IamProfileId", out var p) && p.ValueKind != JsonValueKind.Null
+                ? p.GetGuid()
+                : (Guid?)null;
+
+            var actorProvider = root.TryGetProperty("actorProvider", out var ap) ? ap.GetString() : null;
+            var actorSubject = root.TryGetProperty("actorSubject", out var asu) ? asu.GetString() : null;
+
+            var exists = await auditDb.AuditEvents.AsNoTracking()
+                .AnyAsync(x => x.SourceMessageId == msg.Id, ct);
+
+            if (exists)
+                return;
+
+            auditDb.AuditEvents.Add(new UniGate.Audit.Domain.AuditEvent(
+                type: msg.Type,
+                actorProvider: actorProvider,
+                actorSubject: actorSubject,
+                actorProfileId: null,
+                resourceType: "directory.student",
+                resourceId: studentId.ToString(),
+                correlationId: msg.CorrelationId,
+                traceId: msg.TraceId,
+                ip: null,
+                userAgent: null,
+                dataJson: JsonSerializer.Serialize(new { studentId, groupId, firstName, lastName, email, isActive, iamProfileId }),
+                sourceMessageId: msg.Id
+            ));
+
+            await auditDb.SaveChangesAsync(ct);
+            return;
+        }
+
         throw new InvalidOperationException($"Unsupported outbox message type: {msg.Type}");
     }
 }

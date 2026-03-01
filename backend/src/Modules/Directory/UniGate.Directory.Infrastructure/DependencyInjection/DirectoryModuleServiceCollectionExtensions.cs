@@ -3,6 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Directory.Application.Groups;
 using UniGate.Directory.Application.Groups.UseCases;
+using UniGate.Directory.Application.Students;
+using UniGate.Directory.Application.Students.UseCases;
 using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Directory.Infrastructure.Stores;
 
@@ -28,11 +30,22 @@ public static class DirectoryModuleServiceCollectionExtensions
         });
 
         services.AddScoped<IGroupStore, EfGroupStore>();
+
         services.AddScoped<CreateGroupUseCase>();
         services.AddScoped<ListGroupsUseCase>();
         services.AddScoped<GetGroupByIdUseCase>();
         services.AddScoped<UpdateGroupUseCase>();
         services.AddScoped<SetGroupActiveUseCase>();
+
+        services.AddScoped<IStudentStore, EfStudentStore>();
+
+        services.AddScoped<CreateStudentUseCase>();
+        services.AddScoped<ListStudentsUseCase>();
+        services.AddScoped<GetStudentByIdUseCase>();
+        services.AddScoped<UpdateStudentUseCase>();
+        services.AddScoped<SetStudentActiveUseCase>();
+        services.AddScoped<ChangeStudentGroupUseCase>();
+        services.AddScoped<BindStudentProfileUseCase>();
 
         return services;
     }
