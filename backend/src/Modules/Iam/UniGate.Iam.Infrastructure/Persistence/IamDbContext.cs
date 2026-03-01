@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Emit;
 using UniGate.Iam.Domain;
-using UniGate.Iam.Infrastructure.Outbox;
+using UniGate.SharedKernel.Outbox;
 
 namespace UniGate.Iam.Infrastructure.Persistence;
 

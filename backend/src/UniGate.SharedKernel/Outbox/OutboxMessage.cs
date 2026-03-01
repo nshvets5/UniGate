@@ -1,4 +1,4 @@
-namespace UniGate.Iam.Infrastructure.Outbox;
+namespace UniGate.SharedKernel.Outbox;
 
 public sealed class OutboxMessage
 {
@@ -23,11 +23,7 @@ public sealed class OutboxMessage
 
     private OutboxMessage() { }
 
-    public OutboxMessage(
-        string type,
-        string payloadJson,
-        string? correlationId,
-        string? traceId)
+    public OutboxMessage(string type, string payloadJson, string? correlationId, string? traceId)
     {
         Type = type;
         PayloadJson = payloadJson;

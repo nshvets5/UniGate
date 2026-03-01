@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UniGate.Iam.Infrastructure.Persistence;
+using UniGate.SharedKernel.Outbox;
 
 namespace UniGate.Iam.Infrastructure.Outbox;
 

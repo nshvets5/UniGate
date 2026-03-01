@@ -1,4 +1,4 @@
-using UniGate.Iam.Infrastructure.Outbox;
+using UniGate.SharedKernel.Outbox;
 
 namespace UniGate.Iam.Infrastructure.Outbox;
 

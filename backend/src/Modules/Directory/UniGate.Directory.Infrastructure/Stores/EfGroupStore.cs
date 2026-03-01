@@ -1,8 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using UniGate.Directory.Application.Groups;
 using UniGate.Directory.Domain;
 using UniGate.Directory.Infrastructure.Persistence;
+using UniGate.SharedKernel.Auth;
+using UniGate.SharedKernel.Observability;
+using UniGate.SharedKernel.Outbox;
 using UniGate.SharedKernel.Pagination;
 using UniGate.SharedKernel.Results;
 
@@ -13,10 +17,22 @@ public sealed class EfGroupStore : IGroupStore
     private readonly DirectoryDbContext _db;
     private readonly ILogger<EfGroupStore> _logger;
 
-    public EfGroupStore(DirectoryDbContext db, ILogger<EfGroupStore> logger)
+    private readonly ICurrentUser _currentUser;
+    private readonly IIdentityProvider _identityProvider;
+    private readonly IRequestContext _requestContext;
+
+    public EfGroupStore(
+        DirectoryDbContext db,
+        ILogger<EfGroupStore> logger,
+        ICurrentUser currentUser,
+        IIdentityProvider identityProvider,
+        IRequestContext requestContext)
     {
         _db = db;
         _logger = logger;
+        _currentUser = currentUser;
+        _identityProvider = identityProvider;
+        _requestContext = requestContext;
     }
 
     public async Task<Result<Guid>> CreateAsync(CreateGroupCommand cmd, CancellationToken ct = default)
@@ -30,6 +46,25 @@ public sealed class EfGroupStore : IGroupStore
             var group = new Group(cmd.Code.Trim(), cmd.Name.Trim(), cmd.AdmissionYear);
 
             _db.Groups.Add(group);
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                groupId = group.Id,
+                group.Code,
+                group.Name,
+                group.AdmissionYear,
+                group.IsActive,
+                actorProvider = _identityProvider.Name,
+                actorSubject = _currentUser.Subject,
+                occurredAt = DateTimeOffset.UtcNow
+            });
+
+            _db.OutboxMessages.Add(new OutboxMessage(
+                type: GroupOutboxTypes.GroupCreated,
+                payloadJson: payload,
+                correlationId: _requestContext.CorrelationId,
+                traceId: _requestContext.TraceId));
+
             await _db.SaveChangesAsync(ct);
 
             return Result<Guid>.Success(group.Id);
@@ -120,6 +155,24 @@ public sealed class EfGroupStore : IGroupStore
             group.Rename(cmd.Name.Trim());
             group.SetAdmissionYear(cmd.AdmissionYear);
 
+            var payload = JsonSerializer.Serialize(new
+            {
+                groupId = group.Id,
+                group.Code,
+                group.Name,
+                group.AdmissionYear,
+                group.IsActive,
+                actorProvider = _identityProvider.Name,
+                actorSubject = _currentUser.Subject,
+                occurredAt = DateTimeOffset.UtcNow
+            });
+
+            _db.OutboxMessages.Add(new OutboxMessage(
+                type: GroupOutboxTypes.GroupUpdated,
+                payloadJson: payload,
+                correlationId: _requestContext.CorrelationId,
+                traceId: _requestContext.TraceId));
+
             await _db.SaveChangesAsync(ct);
             return Result.Success();
         }
@@ -144,6 +197,25 @@ public sealed class EfGroupStore : IGroupStore
                 return Result.Failure(DirectoryErrors.Groups.NotFound);
 
             group.SetActive(cmd.IsActive);
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                groupId = group.Id,
+                group.Code,
+                group.Name,
+                group.AdmissionYear,
+                group.IsActive,
+                actorProvider = _identityProvider.Name,
+                actorSubject = _currentUser.Subject,
+                occurredAt = DateTimeOffset.UtcNow
+            });
+
+            _db.OutboxMessages.Add(new OutboxMessage(
+                type: GroupOutboxTypes.GroupActiveChanged,
+                payloadJson: payload,
+                correlationId: _requestContext.CorrelationId,
+                traceId: _requestContext.TraceId));
+
             await _db.SaveChangesAsync(ct);
 
             return Result.Success();

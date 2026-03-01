@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using UniGate.Audit.Infrastructure.Persistence;
 using UniGate.Iam.Infrastructure.Outbox;
+using UniGate.SharedKernel.Outbox;
 
 namespace UniGate.Api.Outbox;
 
@@ -102,6 +103,45 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                 ip: null,
                 userAgent: null,
                 dataJson: JsonSerializer.Serialize(new { email, displayName }),
+                sourceMessageId: msg.Id
+            ));
+
+            await auditDb.SaveChangesAsync(ct);
+            return;
+        }
+
+        if (msg.Type is "directory.group_created" or "directory.group_updated" or "directory.group_active_changed")
+        {
+            using var doc = JsonDocument.Parse(msg.PayloadJson);
+            var root = doc.RootElement;
+
+            var groupId = root.GetProperty("groupId").GetGuid();
+            var code = root.GetProperty("Code").GetString();
+            var name = root.GetProperty("Name").GetString();
+            var admissionYear = root.GetProperty("AdmissionYear").GetInt32();
+            var isActive = root.GetProperty("IsActive").GetBoolean();
+
+            var actorProvider = root.TryGetProperty("actorProvider", out var ap) ? ap.GetString() : null;
+            var actorSubject = root.TryGetProperty("actorSubject", out var asu) ? asu.GetString() : null;
+
+            var exists = await auditDb.AuditEvents.AsNoTracking()
+                .AnyAsync(x => x.SourceMessageId == msg.Id, ct);
+
+            if (exists)
+                return;
+
+            auditDb.AuditEvents.Add(new UniGate.Audit.Domain.AuditEvent(
+                type: msg.Type,
+                actorProvider: actorProvider,
+                actorSubject: actorSubject,
+                actorProfileId: null,
+                resourceType: "directory.group",
+                resourceId: groupId.ToString(),
+                correlationId: msg.CorrelationId,
+                traceId: msg.TraceId,
+                ip: null,
+                userAgent: null,
+                dataJson: JsonSerializer.Serialize(new { groupId, code, name, admissionYear, isActive }),
                 sourceMessageId: msg.Id
             ));
 
