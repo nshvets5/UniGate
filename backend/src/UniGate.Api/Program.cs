@@ -52,7 +52,8 @@ builder.Services.AddHostedService<UniGate.Api.Outbox.OutboxProcessorHostedServic
 
 builder.Services
     .AddAppAuthentication(builder.Configuration)
-    .AddAppAuthorization();
+    .AddAppAuthorization()
+    .AddAuditAuthorization();
 
 var app = builder.Build();
 

@@ -46,6 +46,9 @@ public static class AuthenticationExtensions
                     NameClaimType = "preferred_username",
                     RoleClaimType = ClaimTypes.Role
                 };
+
+                options.Events ??= new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents();
+                options.Events.OnTokenValidated = ctx => UniGate.Api.Auth.KeycloakRoleClaimsTransformer.AddRealmRolesAsRoleClaims(ctx);
             });
 
         return services;

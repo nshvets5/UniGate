@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Audit.Application;
+using UniGate.Audit.Application.Read;
 using UniGate.Audit.Application.Write;
 using UniGate.Audit.Infrastructure.Persistence;
+using UniGate.Audit.Infrastructure.Read;
 using UniGate.Audit.Infrastructure.Stores;
 
 namespace UniGate.Audit.Infrastructure.DependencyInjection;
@@ -29,6 +31,7 @@ public static class AuditModuleServiceCollectionExtensions
 
         services.AddScoped<IAuditStore, EfAuditStore>();
         services.AddScoped<WriteAuditEventUseCase>();
+        services.AddScoped<IAuditQuery, EfAuditQuery>();
 
         return services;
     }
