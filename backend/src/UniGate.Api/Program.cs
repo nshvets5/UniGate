@@ -6,10 +6,12 @@ using UniGate.Api.HealthChecks;
 using UniGate.Api.Middleware;
 using UniGate.Api.Observability;
 using UniGate.Api.Swagger;
-using UniGate.Iam.Infrastructure.DependencyInjection;
-using UniGate.Iam.Infrastructure.Persistence;
 using UniGate.Audit.Infrastructure.DependencyInjection;
 using UniGate.Audit.Infrastructure.Persistence;
+using UniGate.Directory.Infrastructure.DependencyInjection;
+using UniGate.Directory.Infrastructure.Persistence;
+using UniGate.Iam.Infrastructure.DependencyInjection;
+using UniGate.Iam.Infrastructure.Persistence;
 using UniGate.SharedKernel.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +34,10 @@ builder.Services.AddHealthChecks()
         (name: "audit_db",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
         tags: new[] { "ready" })
+    .AddDbContextCheck<DirectoryDbContext>
+        (name: "directory_db",
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
+        tags: new[] { "ready" })
     .AddCheck<KeycloakDiscoveryHealthCheck>(
         name: "keycloak",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
@@ -51,13 +57,15 @@ builder.Services.AddSingleton<IIdentityProvider, ConfigIdentityProvider>();
 
 builder.Services.AddIamModule(builder.Configuration);
 builder.Services.AddAuditModule(builder.Configuration);
+builder.Services.AddDirectoryModule(builder.Configuration);
 
 builder.Services.AddHostedService<UniGate.Api.Outbox.OutboxProcessorHostedService>();
 
 builder.Services
     .AddAppAuthentication(builder.Configuration)
     .AddAppAuthorization()
-    .AddAuditAuthorization();
+    .AddAuditAuthorization()
+    .AddDirectoryAuthorization();
 
 var app = builder.Build();
 

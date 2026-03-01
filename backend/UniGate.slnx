@@ -9,6 +9,11 @@
     <Project Path="src/Modules/Audit/UniGate.Audit.Domain/UniGate.Audit.Domain.csproj" Id="91463e29-47d1-4b81-976b-7908fb3297d9" />
     <Project Path="src/Modules/Audit/UniGate.Audit.Infrastructure/UniGate.Audit.Infrastructure.csproj" Id="35af0c5a-f6ba-4f46-99f5-24d31fc0717c" />
   </Folder>
+  <Folder Name="/src/Modules/Directory/">
+    <Project Path="src/Modules/Directory/UniGate.Directory.Application/UniGate.Directory.Application.csproj" Id="375334b6-0ed3-45a6-bb20-e9c158e0a991" />
+    <Project Path="src/Modules/Directory/UniGate.Directory.Domain/UniGate.Directory.Domain.csproj" Id="4e182741-12f6-4fca-8720-39cf3645a33d" />
+    <Project Path="src/Modules/Directory/UniGate.Directory.Infrastructure/UniGate.Directory.Infrastructure.csproj" Id="4bf97de3-6308-4b23-af6f-4367373b2c7a" />
+  </Folder>
   <Folder Name="/src/Modules/Iam/">
     <Project Path="src/Modules/Iam/UniGate.Iam.Application/UniGate.Iam.Application.csproj" />
     <Project Path="src/Modules/Iam/UniGate.Iam.Domain/UniGate.Iam.Domain.csproj" />

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Modules\Audit\UniGate.Audit.Infrastructure\UniGate.Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Directory\UniGate.Directory.Infrastructure\UniGate.Directory.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Iam\UniGate.Iam.Infrastructure\UniGate.Iam.Infrastructure.csproj" />
     <ProjectReference Include="..\UniGate.SharedKernel\UniGate.SharedKernel.csproj" />
   </ItemGroup>
