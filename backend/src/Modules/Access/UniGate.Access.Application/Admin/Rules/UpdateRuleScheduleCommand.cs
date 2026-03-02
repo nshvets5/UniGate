@@ -1,8 +1,7 @@
 namespace UniGate.Access.Application.Admin;
 
-public sealed record CreateRuleCommand(
-    Guid ZoneId,
-    Guid GroupId,
+public sealed record UpdateRuleScheduleCommand(
+    Guid Id,
     int? DaysMask,
     TimeOnly? StartTime,
     TimeOnly? EndTime,

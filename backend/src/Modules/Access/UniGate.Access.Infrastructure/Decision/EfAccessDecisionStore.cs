@@ -45,9 +45,27 @@ public sealed class EfAccessDecisionStore : IAccessDecisionStore
     {
         try
         {
-            var ok = await _db.Rules.AsNoTracking()
-                .AnyAsync(r => r.ZoneId == zoneId && r.GroupId == groupId && r.IsActive, ct);
+            var rules = await _db.Rules.AsNoTracking()
+                .Where(r => r.ZoneId == zoneId && r.GroupId == groupId && r.IsActive)
+                .ToListAsync(ct);
 
+            if (rules.Count == 0)
+                return Result<bool>.Success(false);
+
+            var tzId = "Europe/Rome";
+            TimeZoneInfo tz;
+            try
+            {
+                tz = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+            }
+            catch
+            {
+                tz = TimeZoneInfo.Utc;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+
+            var ok = rules.Any(r => r.IsAllowedAtLocal(now, tz));
             return Result<bool>.Success(ok);
         }
         catch (Exception ex)

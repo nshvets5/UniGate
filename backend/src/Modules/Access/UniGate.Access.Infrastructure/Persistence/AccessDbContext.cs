@@ -55,6 +55,12 @@ public sealed class AccessDbContext : DbContext
             b.Property(x => x.IsActive).IsRequired();
             b.Property(x => x.CreatedAt).IsRequired();
 
+            b.Property(x => x.DaysMask);
+            b.Property(x => x.StartTime);
+            b.Property(x => x.EndTime);
+            b.Property(x => x.ValidFrom);
+            b.Property(x => x.ValidTo);
+
             b.HasIndex(x => new { x.ZoneId, x.GroupId }).IsUnique();
             b.HasIndex(x => x.GroupId);
 

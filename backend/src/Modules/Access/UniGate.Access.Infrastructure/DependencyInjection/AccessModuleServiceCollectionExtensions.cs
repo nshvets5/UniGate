@@ -50,6 +50,7 @@ public static class AccessModuleServiceCollectionExtensions
 
         services.AddScoped<CreateRuleUseCase>();
         services.AddScoped<ListRulesUseCase>();
+        services.AddScoped<UpdateRuleScheduleUseCase>();
         services.AddScoped<SetRuleActiveUseCase>();
 
         return services;

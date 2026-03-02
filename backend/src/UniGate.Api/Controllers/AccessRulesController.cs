@@ -15,16 +15,19 @@ public sealed class AccessRulesController : ApiControllerBase
 {
     private readonly CreateRuleUseCase _create;
     private readonly ListRulesUseCase _list;
+    private readonly UpdateRuleScheduleUseCase _schedule;
     private readonly SetRuleActiveUseCase _active;
 
     public AccessRulesController(
         CreateRuleUseCase create,
         ListRulesUseCase list,
+        UpdateRuleScheduleUseCase schedule,
         SetRuleActiveUseCase active,
         IApiErrorMapper mapper) : base(mapper)
     {
         _create = create;
         _list = list;
+        _schedule = schedule;
         _active = active;
     }
 
@@ -41,6 +44,20 @@ public sealed class AccessRulesController : ApiControllerBase
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
         => ToActionResult(await _list.ExecuteAsync(zoneId, groupId, isActive, page, pageSize, ct));
+
+    public sealed record UpdateScheduleRequest(
+    int? DaysMask,
+    TimeOnly? StartTime,
+    TimeOnly? EndTime,
+    DateTimeOffset? ValidFrom,
+    DateTimeOffset? ValidTo);
+
+    [HttpPatch("{id:guid}/schedule")]
+    public async Task<IActionResult> UpdateSchedule([FromRoute] Guid id, [FromBody] UpdateScheduleRequest req, CancellationToken ct)
+    {
+        var cmd = new UpdateRuleScheduleCommand(id, req.DaysMask, req.StartTime, req.EndTime, req.ValidFrom, req.ValidTo);
+        return ToActionResult(await _schedule.ExecuteAsync(cmd, ct));
+    }
 
     public sealed record SetActiveAccessRulesRequest(bool IsActive);
 

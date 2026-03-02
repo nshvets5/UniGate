@@ -11,5 +11,6 @@ public static class AccessOutboxTypes
     public const string DoorActiveChanged = "access.door_active_changed";
 
     public const string RuleCreated = "access.rule_created";
+    public const string RuleUpdatedSchedule = "access.rule_schedule_updated";
     public const string RuleActiveChanged = "access.rule_active_changed";
 }

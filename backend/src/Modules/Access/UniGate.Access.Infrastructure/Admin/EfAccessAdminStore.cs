@@ -365,6 +365,14 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
                 return Result<Guid>.Failure(new Error("rule.duplicate", "Rule for this zone and group already exists."));
 
             var r = new AccessRule(cmd.ZoneId, cmd.GroupId);
+            try
+            {
+                r.SetSchedule(cmd.DaysMask, cmd.StartTime, cmd.EndTime, cmd.ValidFrom, cmd.ValidTo);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Result<Guid>.Failure(new Error("rule.schedule_invalid", ex.Message));
+            }
             _db.Rules.Add(r);
 
             Emit(AccessOutboxTypes.RuleCreated, new
@@ -373,6 +381,11 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
                 r.ZoneId,
                 r.GroupId,
                 r.IsActive,
+                r.DaysMask,
+                r.StartTime,
+                r.EndTime,
+                r.ValidFrom,
+                r.ValidTo,
                 Actor = Actor()
             });
 
@@ -413,6 +426,47 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
         {
             _logger.LogError(ex, "ListRules failed");
             return Result<PagedResult<RuleDto>>.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+    }
+
+    public async Task<Result> UpdateRuleScheduleAsync(UpdateRuleScheduleCommand cmd, CancellationToken ct)
+    {
+        try
+        {
+            var r = await _db.Rules.FirstOrDefaultAsync(x => x.Id == cmd.Id, ct);
+            if (r is null)
+                return Result.Failure(new Error("rule.not_found", "Rule not found."));
+
+            try
+            {
+                r.SetSchedule(cmd.DaysMask, cmd.StartTime, cmd.EndTime, cmd.ValidFrom, cmd.ValidTo);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Result.Failure(new Error("rule.schedule_invalid", ex.Message));
+            }
+
+            Emit(AccessOutboxTypes.RuleUpdatedSchedule, new
+            {
+                ruleId = r.Id,
+                r.ZoneId,
+                r.GroupId,
+                r.IsActive,
+                r.DaysMask,
+                r.StartTime,
+                r.EndTime,
+                r.ValidFrom,
+                r.ValidTo,
+                Actor = Actor()
+            });
+
+            await _db.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "UpdateRuleSchedule failed");
+            return Result.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }
 

@@ -25,5 +25,6 @@ public interface IAccessAdminStore
     // Rules
     Task<Result<Guid>> CreateRuleAsync(CreateRuleCommand cmd, CancellationToken ct);
     Task<Result<PagedResult<RuleDto>>> ListRulesAsync(Guid? zoneId, Guid? groupId, bool? isActive, int page, int pageSize, CancellationToken ct);
+    Task<Result> UpdateRuleScheduleAsync(UpdateRuleScheduleCommand cmd, CancellationToken ct);
     Task<Result> SetRuleActiveAsync(Guid id, bool isActive, CancellationToken ct);
 }
