@@ -32,6 +32,9 @@ public static class TimetableModuleServiceCollectionExtensions
         services.Configure<TimetableSyncOptions>(configuration.GetSection("Timetable:Sync"));
         services.AddHostedService<TimetableAutoSyncHostedService>();
 
+        services.AddSingleton<TimetableSyncStatus>();
+        services.AddSingleton<TimetableSyncHealthCheck>();
+
         return services;
     }
 }

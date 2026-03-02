@@ -21,10 +21,18 @@ public sealed class TimetableController : ApiControllerBase
         _sync = sync;
     }
 
+    public sealed class ImportCsvRequest
+    {
+        public IFormFile File { get; set; } = default!;
+    }
+
     [HttpPost("import/csv")]
     [RequestSizeLimit(10_000_000)]
-    public async Task<IActionResult> ImportCsv([FromForm] IFormFile file, CancellationToken ct)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> ImportCsv([FromForm] ImportCsvRequest req, CancellationToken ct)
     {
+        var file = req.File;
+
         if (file is null || file.Length == 0)
             return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
                 UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));

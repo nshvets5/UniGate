@@ -16,8 +16,9 @@ using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Iam.Infrastructure.DependencyInjection;
 using UniGate.Iam.Infrastructure.Persistence;
 using UniGate.SharedKernel.Auth;
-using UniGate.Timetable.Infrastructure.Persistence;
 using UniGate.Timetable.Infrastructure.DependencyInjection;
+using UniGate.Timetable.Infrastructure.Persistence;
+using UniGate.Timetable.Infrastructure.Sync;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,10 @@ builder.Services.AddHealthChecks()
     .AddCheck<OutboxBacklogHealthCheck>(
         name: "outbox_backlog",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded,
+        tags: new[] { "ready" })
+    .AddCheck<TimetableSyncHealthCheck>(
+        name: "timetable_sync",
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
         tags: new[] { "ready" });
 
 builder.Services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();

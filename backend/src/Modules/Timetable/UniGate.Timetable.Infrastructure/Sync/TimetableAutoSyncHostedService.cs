@@ -11,14 +11,17 @@ public sealed class TimetableAutoSyncHostedService : BackgroundService
     private readonly IServiceProvider _sp;
     private readonly IOptionsMonitor<TimetableSyncOptions> _options;
     private readonly ILogger<TimetableAutoSyncHostedService> _logger;
+    private readonly TimetableSyncStatus _status;
 
     public TimetableAutoSyncHostedService(
         IServiceProvider sp,
         IOptionsMonitor<TimetableSyncOptions> options,
+        TimetableSyncStatus status,
         ILogger<TimetableAutoSyncHostedService> logger)
     {
         _sp = sp;
         _options = options;
+        _status = status;
         _logger = logger;
     }
 
@@ -64,6 +67,9 @@ public sealed class TimetableAutoSyncHostedService : BackgroundService
     {
         var opt = _options.CurrentValue;
 
+        var started = DateTimeOffset.UtcNow;
+        _status.MarkRun(started);
+
         var jitter = Math.Max(0, opt.JitterSeconds);
         if (jitter > 0)
         {
@@ -77,17 +83,20 @@ public sealed class TimetableAutoSyncHostedService : BackgroundService
             using var scope = _sp.CreateScope();
             var sync = scope.ServiceProvider.GetRequiredService<SyncTimetableToAccessUseCase>();
 
-            var started = DateTimeOffset.UtcNow;
             var res = await sync.ExecuteAsync(ct);
 
             if (res.IsSuccess)
             {
+                _status.MarkSuccess(DateTimeOffset.UtcNow, res.Value);
+
                 _logger.LogInformation("Timetable auto-sync succeeded. Updated rules: {Count}. Took {Ms} ms",
                     res.Value,
                     (DateTimeOffset.UtcNow - started).TotalMilliseconds);
             }
             else
             {
+                _status.MarkFailure(DateTimeOffset.UtcNow, $"{res.Error.Code}: {res.Error.Message}");
+
                 _logger.LogWarning("Timetable auto-sync failed. Code={Code}, Message={Message}",
                     res.Error.Code, res.Error.Message);
             }
@@ -98,6 +107,7 @@ public sealed class TimetableAutoSyncHostedService : BackgroundService
         }
         catch (Exception ex)
         {
+            _status.MarkFailure(DateTimeOffset.UtcNow, ex.Message);
             _logger.LogError(ex, "Timetable auto-sync crashed (will retry on next tick).");
         }
     }
