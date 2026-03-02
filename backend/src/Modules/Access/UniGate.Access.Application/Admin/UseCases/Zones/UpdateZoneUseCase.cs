@@ -1,6 +1,7 @@
+using UniGate.Access.Application.Admin.Zones;
 using UniGate.SharedKernel.Results;
 
-namespace UniGate.Access.Application.Admin.UseCases;
+namespace UniGate.Access.Application.Admin.UseCases.Zones;
 
 public sealed class UpdateZoneUseCase
 {

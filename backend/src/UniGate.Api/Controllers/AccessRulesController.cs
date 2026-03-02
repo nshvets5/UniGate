@@ -42,9 +42,9 @@ public sealed class AccessRulesController : ApiControllerBase
         CancellationToken ct = default)
         => ToActionResult(await _list.ExecuteAsync(zoneId, groupId, isActive, page, pageSize, ct));
 
-    public sealed record SetActiveRequest(bool IsActive);
+    public sealed record SetActiveAccessRulesRequest(bool IsActive);
 
     [HttpPatch("{id:guid}/active")]
-    public async Task<IActionResult> SetActive([FromRoute] Guid id, [FromBody] SetActiveRequest req, CancellationToken ct)
+    public async Task<IActionResult> SetActive([FromRoute] Guid id, [FromBody] SetActiveAccessRulesRequest req, CancellationToken ct)
         => ToActionResult(await _active.ExecuteAsync(id, req.IsActive, ct));
 }

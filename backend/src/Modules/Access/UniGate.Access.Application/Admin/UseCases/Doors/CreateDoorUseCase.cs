@@ -1,3 +1,4 @@
+using UniGate.Access.Application.Admin.Doors;
 using UniGate.SharedKernel.Results;
 
 namespace UniGate.Access.Application.Admin.UseCases.Doors;

@@ -1,8 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using UniGate.Access.Application.Admin;
+using UniGate.Access.Application.Admin.Doors;
+using UniGate.Access.Application.Admin.Rules;
+using UniGate.Access.Application.Admin.Zones;
 using UniGate.Access.Domain;
 using UniGate.Access.Infrastructure.Persistence;
+using UniGate.SharedKernel.Auth;
+using UniGate.SharedKernel.Observability;
+using UniGate.SharedKernel.Outbox;
 using UniGate.SharedKernel.Pagination;
 using UniGate.SharedKernel.Results;
 
@@ -13,10 +20,22 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
     private readonly AccessDbContext _db;
     private readonly ILogger<EfAccessAdminStore> _logger;
 
-    public EfAccessAdminStore(AccessDbContext db, ILogger<EfAccessAdminStore> logger)
+    private readonly ICurrentUser _currentUser;
+    private readonly IIdentityProvider _identityProvider;
+    private readonly IRequestContext _requestContext;
+
+    public EfAccessAdminStore(
+        AccessDbContext db,
+        ILogger<EfAccessAdminStore> logger,
+        ICurrentUser currentUser,
+        IIdentityProvider identityProvider,
+        IRequestContext requestContext)
     {
         _db = db;
         _logger = logger;
+        _currentUser = currentUser;
+        _identityProvider = identityProvider;
+        _requestContext = requestContext;
     }
 
     // ZONES
@@ -31,6 +50,16 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
 
             var z = new Zone(code, cmd.Name.Trim());
             _db.Zones.Add(z);
+
+            Emit(AccessOutboxTypes.ZoneCreated, new
+            {
+                zoneId = z.Id,
+                z.Code,
+                z.Name,
+                z.IsActive,
+                Actor = Actor()
+            });
+
             await _db.SaveChangesAsync(ct);
             return Result<Guid>.Success(z.Id);
         }
@@ -107,6 +136,16 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             }
 
             z.Rename(cmd.Name.Trim());
+
+            Emit(AccessOutboxTypes.ZoneUpdated, new
+            {
+                zoneId = z.Id,
+                z.Code,
+                z.Name,
+                z.IsActive,
+                Actor = Actor()
+            });
+
             await _db.SaveChangesAsync(ct);
             return Result.Success();
         }
@@ -126,6 +165,16 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
                 return Result.Failure(new Error("zone.not_found", "Zone not found."));
 
             z.SetActive(isActive);
+
+            Emit(AccessOutboxTypes.ZoneActiveChanged, new
+            {
+                zoneId = z.Id,
+                z.Code,
+                z.Name,
+                z.IsActive,
+                Actor = Actor()
+            });
+
             await _db.SaveChangesAsync(ct);
             return Result.Success();
         }
@@ -152,6 +201,17 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
 
             var d = new Door(cmd.ZoneId, code, cmd.Name.Trim());
             _db.Doors.Add(d);
+
+            Emit(AccessOutboxTypes.DoorCreated, new
+            {
+                doorId = d.Id,
+                d.ZoneId,
+                d.Code,
+                d.Name,
+                d.IsActive,
+                Actor = Actor()
+            });
+
             await _db.SaveChangesAsync(ct);
             return Result<Guid>.Success(d.Id);
         }
@@ -239,6 +299,16 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
 
             d.Rename(cmd.Name.Trim());
 
+            Emit(AccessOutboxTypes.DoorUpdated, new
+            {
+                doorId = d.Id,
+                d.ZoneId,
+                d.Code,
+                d.Name,
+                d.IsActive,
+                Actor = Actor()
+            });
+
             await _db.SaveChangesAsync(ct);
             return Result.Success();
         }
@@ -258,6 +328,17 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
                 return Result.Failure(new Error("door.not_found", "Door not found."));
 
             d.SetActive(isActive);
+
+            Emit(AccessOutboxTypes.DoorActiveChanged, new
+            {
+                doorId = d.Id,
+                d.ZoneId,
+                d.Code,
+                d.Name,
+                d.IsActive,
+                Actor = Actor()
+            });
+
             await _db.SaveChangesAsync(ct);
             return Result.Success();
         }
@@ -285,6 +366,16 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
 
             var r = new AccessRule(cmd.ZoneId, cmd.GroupId);
             _db.Rules.Add(r);
+
+            Emit(AccessOutboxTypes.RuleCreated, new
+            {
+                ruleId = r.Id,
+                r.ZoneId,
+                r.GroupId,
+                r.IsActive,
+                Actor = Actor()
+            });
+
             await _db.SaveChangesAsync(ct);
             return Result<Guid>.Success(r.Id);
         }
@@ -334,6 +425,16 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
                 return Result.Failure(new Error("rule.not_found", "Rule not found."));
 
             r.SetActive(isActive);
+
+            Emit(AccessOutboxTypes.RuleActiveChanged, new
+            {
+                ruleId = r.Id,
+                r.ZoneId,
+                r.GroupId,
+                r.IsActive,
+                Actor = Actor()
+            });
+
             await _db.SaveChangesAsync(ct);
             return Result.Success();
         }
@@ -343,4 +444,22 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             return Result.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }
+
+    private void Emit(string type, object payload)
+    {
+        var json = JsonSerializer.Serialize(payload);
+
+        _db.OutboxMessages.Add(new OutboxMessage(
+            type: type,
+            payloadJson: json,
+            correlationId: _requestContext.CorrelationId,
+            traceId: _requestContext.TraceId));
+    }
+
+    private object Actor() => new
+    {
+        actorProvider = _identityProvider.Name,
+        actorSubject = _currentUser.Subject,
+        occurredAt = DateTimeOffset.UtcNow
+    };
 }

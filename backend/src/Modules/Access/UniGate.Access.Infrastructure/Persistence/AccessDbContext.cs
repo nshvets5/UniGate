@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UniGate.Access.Domain;
+using UniGate.SharedKernel.Outbox;
 
 namespace UniGate.Access.Infrastructure.Persistence;
 
@@ -10,6 +11,7 @@ public sealed class AccessDbContext : DbContext
     public DbSet<Zone> Zones => Set<Zone>();
     public DbSet<Door> Doors => Set<Door>();
     public DbSet<AccessRule> Rules => Set<AccessRule>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +62,29 @@ public sealed class AccessDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.ZoneId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OutboxMessage>(b =>
+        {
+            b.ToTable("messages", "outbox", tb => tb.ExcludeFromMigrations());
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Id);
+            b.Property(x => x.OccurredAt).IsRequired();
+            b.Property(x => x.Type).HasMaxLength(200).IsRequired();
+            b.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
+
+            b.Property(x => x.CorrelationId).HasMaxLength(64);
+            b.Property(x => x.TraceId).HasMaxLength(128);
+
+            b.Property(x => x.Attempts).IsRequired();
+            b.Property(x => x.LastError).HasMaxLength(2000);
+
+            b.Property(x => x.AvailableAt).IsRequired();
+            b.Property(x => x.ProcessedAt);
+
+            b.Property(x => x.DeadLetteredAt);
+            b.Property(x => x.DeadLetterReason).HasMaxLength(2000);
         });
     }
 }

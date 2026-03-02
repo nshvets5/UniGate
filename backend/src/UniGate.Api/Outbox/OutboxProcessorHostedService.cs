@@ -224,6 +224,64 @@ public sealed class OutboxProcessorHostedService : BackgroundService
             return;
         }
 
+        if (msg.Type.StartsWith("access.", StringComparison.Ordinal))
+        {
+            using var doc = JsonDocument.Parse(msg.PayloadJson);
+            var root = doc.RootElement;
+
+            string resourceType = "access.unknown";
+            string? resourceId = null;
+
+            if (root.TryGetProperty("zoneId", out var zid))
+            {
+                resourceType = "access.zone";
+                resourceId = zid.GetGuid().ToString();
+            }
+            else if (root.TryGetProperty("doorId", out var did))
+            {
+                resourceType = "access.door";
+                resourceId = did.GetGuid().ToString();
+            }
+            else if (root.TryGetProperty("ruleId", out var rid))
+            {
+                resourceType = "access.rule";
+                resourceId = rid.GetGuid().ToString();
+            }
+
+            string? actorProvider = null;
+            string? actorSubject = null;
+
+            if (root.TryGetProperty("Actor", out var actor) && actor.ValueKind == JsonValueKind.Object)
+            {
+                actorProvider = actor.TryGetProperty("actorProvider", out var ap) ? ap.GetString() : null;
+                actorSubject = actor.TryGetProperty("actorSubject", out var asu) ? asu.GetString() : null;
+            }
+
+            var exists = await auditDb.AuditEvents.AsNoTracking()
+                .AnyAsync(x => x.SourceMessageId == msg.Id, ct);
+
+            if (exists)
+                return;
+
+            auditDb.AuditEvents.Add(new UniGate.Audit.Domain.AuditEvent(
+                type: msg.Type,
+                actorProvider: actorProvider,
+                actorSubject: actorSubject,
+                actorProfileId: null,
+                resourceType: resourceType,
+                resourceId: resourceId,
+                correlationId: msg.CorrelationId,
+                traceId: msg.TraceId,
+                ip: null,
+                userAgent: null,
+                dataJson: msg.PayloadJson,
+                sourceMessageId: msg.Id
+            ));
+
+            await auditDb.SaveChangesAsync(ct);
+            return;
+        }
+
         throw new InvalidOperationException($"Unsupported outbox message type: {msg.Type}");
     }
 

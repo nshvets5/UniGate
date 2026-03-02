@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Access.Application.Admin;
+using UniGate.Access.Application.Admin.UseCases;
 using UniGate.Access.Application.Admin.UseCases.Doors;
 using UniGate.Access.Application.Admin.UseCases.Rules;
 using UniGate.Access.Application.Admin.UseCases.Zones;
@@ -47,7 +48,6 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddScoped<UpdateDoorUseCase>();
         services.AddScoped<SetDoorActiveUseCase>();
 
-        // Rules use cases
         services.AddScoped<CreateRuleUseCase>();
         services.AddScoped<ListRulesUseCase>();
         services.AddScoped<SetRuleActiveUseCase>();
