@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using UniGate.Access.Application.Decision;
 using UniGate.Api.Controllers.Base;
 using UniGate.Api.Errors;
+using UniGate.Api.Security;
 
 namespace UniGate.Api.Controllers;
 
@@ -10,13 +11,13 @@ namespace UniGate.Api.Controllers;
 public sealed class AccessController : ApiControllerBase
 {
     private readonly CheckAccessUseCase _check;
-    private readonly dynamic _ensureProfile; // ToDo
+    private readonly ICurrentProfileIdAccessor _profileId;
 
-    public AccessController(CheckAccessUseCase check, /* EnsureMyProfileUseCase */ dynamic ensureProfile, IApiErrorMapper mapper)
+    public AccessController(CheckAccessUseCase check, ICurrentProfileIdAccessor profileId, IApiErrorMapper mapper)
         : base(mapper)
     {
         _check = check;
-        _ensureProfile = ensureProfile;
+        _profileId = profileId;
     }
 
     public sealed record DecisionRequest(Guid DoorId);
@@ -25,13 +26,11 @@ public sealed class AccessController : ApiControllerBase
     [Authorize]
     public async Task<IActionResult> Decide([FromBody] DecisionRequest req, CancellationToken ct)
     {
-        var profileRes = await _ensureProfile.ExecuteAsync(ct);
+        var profileRes = await _profileId.GetRequiredProfileIdAsync(ct);
         if (!profileRes.IsSuccess)
             return ToActionResult(profileRes);
 
-        Guid profileId = profileRes.Value.ProfileId;
-
-        var result = await _check.ExecuteAsync(new CheckAccessCommand(req.DoorId, profileId), ct);
+        var result = await _check.ExecuteAsync(new CheckAccessCommand(req.DoorId, profileRes.Value), ct);
         return ToActionResult(result);
     }
 }
