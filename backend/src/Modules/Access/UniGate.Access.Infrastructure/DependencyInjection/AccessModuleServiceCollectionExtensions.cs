@@ -10,6 +10,8 @@ using UniGate.Access.Application.Decision;
 using UniGate.Access.Infrastructure.Admin;
 using UniGate.Access.Infrastructure.Decision;
 using UniGate.Access.Infrastructure.Persistence;
+using UniGate.Access.Infrastructure.Scheduling;
+using UniGate.SharedKernel.Access;
 
 namespace UniGate.Access.Infrastructure.DependencyInjection;
 
@@ -52,6 +54,8 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddScoped<ListRulesUseCase>();
         services.AddScoped<UpdateRuleScheduleUseCase>();
         services.AddScoped<SetRuleActiveUseCase>();
+
+        services.AddScoped<IAccessRuleScheduler, EfAccessRuleScheduler>();
 
         return services;
     }

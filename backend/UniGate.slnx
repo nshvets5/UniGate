@@ -24,4 +24,9 @@
     <Project Path="src/Modules/Iam/UniGate.Iam.Domain/UniGate.Iam.Domain.csproj" />
     <Project Path="src/Modules/Iam/UniGate.Iam.Infrastructure/UniGate.Iam.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Timetable/">
+    <Project Path="src/Modules/Timetable/UniGate.Timetable.Application/UniGate.Timetable.Application.csproj" Id="7eaf204f-3541-4ec0-9c25-763647e6cb64" />
+    <Project Path="src/Modules/Timetable/UniGate.Timetable.Domain/UniGate.Timetable.Domain.csproj" Id="b45d0a6e-d5c6-46cf-96bc-454b079ef225" />
+    <Project Path="src/Modules/Timetable/UniGate.Timetable.Infrastructure/UniGate.Timetable.Infrastructure.csproj" Id="b52b604d-6f66-421d-aa70-54e1566bcfd8" />
+  </Folder>
 </Solution>
