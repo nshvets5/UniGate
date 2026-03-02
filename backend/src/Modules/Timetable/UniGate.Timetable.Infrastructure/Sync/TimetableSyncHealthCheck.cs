@@ -1,39 +1,38 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
 
 namespace UniGate.Timetable.Infrastructure.Sync;
 
 public sealed class TimetableSyncHealthCheck : IHealthCheck
 {
-    private readonly TimetableSyncStatus _status;
-    private readonly IOptionsMonitor<TimetableSyncOptions> _options;
+    private readonly TimetableSyncStatusEvaluator _eval;
 
-    public TimetableSyncHealthCheck(TimetableSyncStatus status, IOptionsMonitor<TimetableSyncOptions> options)
+    public TimetableSyncHealthCheck(TimetableSyncStatusEvaluator eval)
     {
-        _status = status;
-        _options = options;
+        _eval = eval;
     }
 
     public Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        var opt = _options.CurrentValue;
-        var snap = _status.GetSnapshot();
+        var s = _eval.Evaluate();
 
         var data = new Dictionary<string, object?>
         {
-            ["enabled"] = opt.Enabled,
-            ["intervalSeconds"] = opt.IntervalSeconds,
-            ["jitterSeconds"] = opt.JitterSeconds,
-            ["runOnStartup"] = opt.RunOnStartup,
-            ["lastRunUtc"] = snap.LastRunUtc,
-            ["lastSuccessUtc"] = snap.LastSuccessUtc,
-            ["lastUpdatedRulesCount"] = snap.LastUpdatedRulesCount,
-            ["lastError"] = snap.LastError
+            ["enabled"] = s.Enabled,
+            ["intervalSeconds"] = s.IntervalSeconds,
+            ["jitterSeconds"] = s.JitterSeconds,
+            ["runOnStartup"] = s.RunOnStartup,
+            ["lastRunUtc"] = s.LastRunUtc,
+            ["lastSuccessUtc"] = s.LastSuccessUtc,
+            ["lastUpdatedRulesCount"] = s.LastUpdatedRulesCount,
+            ["lastError"] = s.LastError,
+            ["ageSeconds"] = s.AgeSeconds,
+            ["staleAfterSeconds"] = s.StaleAfterSeconds,
+            ["isStale"] = s.IsStale
         };
 
-        if (!opt.Enabled)
+        if (!s.Enabled)
         {
             return Task.FromResult(new HealthCheckResult(
                 status: HealthStatus.Healthy,
@@ -42,7 +41,7 @@ public sealed class TimetableSyncHealthCheck : IHealthCheck
                 data: data));
         }
 
-        if (snap.LastRunUtc is null)
+        if (s.LastRunUtc is null)
         {
             return Task.FromResult(new HealthCheckResult(
                 status: HealthStatus.Degraded,
@@ -51,10 +50,7 @@ public sealed class TimetableSyncHealthCheck : IHealthCheck
                 data: data));
         }
 
-        var interval = TimeSpan.FromSeconds(Math.Max(10, opt.IntervalSeconds));
-        var now = DateTimeOffset.UtcNow;
-
-        if (snap.LastSuccessUtc is null)
+        if (s.LastSuccessUtc is null)
         {
             return Task.FromResult(new HealthCheckResult(
                 status: HealthStatus.Unhealthy,
@@ -63,19 +59,16 @@ public sealed class TimetableSyncHealthCheck : IHealthCheck
                 data: data));
         }
 
-        var age = now - snap.LastSuccessUtc.Value;
-        var maxAge = TimeSpan.FromTicks(interval.Ticks * 3);
-
-        if (age > maxAge)
+        if (s.IsStale)
         {
             return Task.FromResult(new HealthCheckResult(
                 status: HealthStatus.Unhealthy,
-                description: "Timetable auto-sync is stale (last success too old).",
+                description: "Timetable auto-sync is stale.",
                 exception: null,
                 data: data));
         }
 
-        if (!string.IsNullOrWhiteSpace(snap.LastError))
+        if (!string.IsNullOrWhiteSpace(s.LastError))
         {
             return Task.FromResult(new HealthCheckResult(
                 status: HealthStatus.Degraded,

@@ -34,6 +34,7 @@ public static class TimetableModuleServiceCollectionExtensions
 
         services.AddSingleton<TimetableSyncStatus>();
         services.AddSingleton<TimetableSyncHealthCheck>();
+        services.AddSingleton<TimetableSyncStatusEvaluator>();
 
         return services;
     }
