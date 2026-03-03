@@ -41,36 +41,60 @@ public sealed class EfAccessDecisionStore : IAccessDecisionStore
         }
     }
 
-    public async Task<Result<bool>> HasActiveRuleAsync(Guid zoneId, Guid groupId, CancellationToken ct)
+    public async Task<Result<bool>> HasAllowedWindowAsync(Guid zoneId, Guid groupId, DateTimeOffset nowUtc, CancellationToken ct)
     {
         try
         {
-            var rules = await _db.Rules.AsNoTracking()
+            var rule = await _db.Rules.AsNoTracking()
                 .Where(r => r.ZoneId == zoneId && r.GroupId == groupId && r.IsActive)
-                .ToListAsync(ct);
+                .Select(r => new { r.Id, r.ValidFrom, r.ValidTo })
+                .FirstOrDefaultAsync(ct);
 
-            if (rules.Count == 0)
+            if (rule is null)
                 return Result<bool>.Success(false);
 
-            var tzId = "Europe/Rome";
+            if (rule.ValidFrom is not null && nowUtc < rule.ValidFrom.Value) return Result<bool>.Success(false);
+            if (rule.ValidTo is not null && nowUtc > rule.ValidTo.Value) return Result<bool>.Success(false);
+
             TimeZoneInfo tz;
-            try
-            {
-                tz = TimeZoneInfo.FindSystemTimeZoneById(tzId);
-            }
-            catch
-            {
-                tz = TimeZoneInfo.Utc;
-            }
+            try { tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome"); }
+            catch { tz = TimeZoneInfo.Utc; }
 
-            var now = DateTimeOffset.UtcNow;
+            var local = TimeZoneInfo.ConvertTime(nowUtc, tz);
+            var dayIso = local.DayOfWeek switch
+            {
+                DayOfWeek.Monday => 1,
+                DayOfWeek.Tuesday => 2,
+                DayOfWeek.Wednesday => 3,
+                DayOfWeek.Thursday => 4,
+                DayOfWeek.Friday => 5,
+                DayOfWeek.Saturday => 6,
+                DayOfWeek.Sunday => 7,
+                _ => 0
+            };
 
-            var ok = rules.Any(r => r.IsAllowedAtLocal(now, tz));
+            var t = TimeOnly.FromDateTime(local.DateTime);
+
+            var windows = await _db.RuleWindows.AsNoTracking()
+                .Where(w => w.RuleId == rule.Id && w.IsActive && w.DayOfWeekIso == dayIso)
+                .ToListAsync(ct);
+
+            if (windows.Count == 0)
+                return Result<bool>.Success(false);
+
+            var ok = windows.Any(w =>
+            {
+                if (w.EndTime >= w.StartTime)
+                    return t >= w.StartTime && t <= w.EndTime;
+
+                return t >= w.StartTime || t <= w.EndTime;
+            });
+
             return Result<bool>.Success(ok);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check rules");
+            _logger.LogError(ex, "Failed to evaluate rule windows");
             return Result<bool>.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }

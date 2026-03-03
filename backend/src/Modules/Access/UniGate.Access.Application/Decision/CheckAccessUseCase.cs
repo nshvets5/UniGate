@@ -37,7 +37,7 @@ public sealed class CheckAccessUseCase
         if (!zoneActive)
             return Result<AccessDecisionDto>.Success(new(false, "ZONE_INACTIVE", cmd.DoorId, zoneId, st.StudentId, st.GroupId));
 
-        var ruleRes = await _store.HasActiveRuleAsync(zoneId, st.GroupId, ct);
+        var ruleRes = await _store.HasAllowedWindowAsync(zoneId, st.GroupId, DateTimeOffset.UtcNow, ct);
         if (!ruleRes.IsSuccess)
             return Result<AccessDecisionDto>.Failure(ruleRes.Error);
 

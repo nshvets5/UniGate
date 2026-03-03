@@ -11,6 +11,7 @@ public sealed class AccessDbContext : DbContext
     public DbSet<Zone> Zones => Set<Zone>();
     public DbSet<Door> Doors => Set<Door>();
     public DbSet<AccessRule> Rules => Set<AccessRule>();
+    public DbSet<RuleWindow> RuleWindows => Set<RuleWindow>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -55,9 +56,6 @@ public sealed class AccessDbContext : DbContext
             b.Property(x => x.IsActive).IsRequired();
             b.Property(x => x.CreatedAt).IsRequired();
 
-            b.Property(x => x.DaysMask);
-            b.Property(x => x.StartTime);
-            b.Property(x => x.EndTime);
             b.Property(x => x.ValidFrom);
             b.Property(x => x.ValidTo);
 
@@ -68,6 +66,27 @@ public sealed class AccessDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.ZoneId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<RuleWindow>(b =>
+        {
+            b.ToTable("rule_windows");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.RuleId).IsRequired();
+            b.Property(x => x.DayOfWeekIso).IsRequired();
+            b.Property(x => x.StartTime).IsRequired();
+            b.Property(x => x.EndTime).IsRequired();
+
+            b.Property(x => x.IsActive).IsRequired();
+            b.Property(x => x.CreatedAt).IsRequired();
+
+            b.HasIndex(x => new { x.RuleId, x.DayOfWeekIso, x.StartTime, x.EndTime }).IsUnique();
+
+            b.HasOne<AccessRule>()
+                .WithMany()
+                .HasForeignKey(x => x.RuleId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<OutboxMessage>(b =>

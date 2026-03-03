@@ -6,6 +6,7 @@ using UniGate.Access.Application.Admin.UseCases.Rules;
 using UniGate.Api.Controllers.Base;
 using UniGate.Api.Errors;
 using UniGate.Api.Extensions;
+using UniGate.SharedKernel.Access;
 
 namespace UniGate.Api.Controllers;
 
@@ -45,17 +46,15 @@ public sealed class AccessRulesController : ApiControllerBase
         CancellationToken ct = default)
         => ToActionResult(await _list.ExecuteAsync(zoneId, groupId, isActive, page, pageSize, ct));
 
-    public sealed record UpdateScheduleRequest(
-    int? DaysMask,
-    TimeOnly? StartTime,
-    TimeOnly? EndTime,
+public sealed record UpdateScheduleRequest(
+    List<RuleWindowDto> Windows,
     DateTimeOffset? ValidFrom,
     DateTimeOffset? ValidTo);
 
     [HttpPatch("{id:guid}/schedule")]
     public async Task<IActionResult> UpdateSchedule([FromRoute] Guid id, [FromBody] UpdateScheduleRequest req, CancellationToken ct)
     {
-        var cmd = new UpdateRuleScheduleCommand(id, req.DaysMask, req.StartTime, req.EndTime, req.ValidFrom, req.ValidTo);
+        var cmd = new UpdateRuleScheduleCommand(id, req.Windows, req.ValidFrom, req.ValidTo);
         return ToActionResult(await _schedule.ExecuteAsync(cmd, ct));
     }
 

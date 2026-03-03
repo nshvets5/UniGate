@@ -5,6 +5,7 @@ using UniGate.Access.Infrastructure.Persistence;
 using UniGate.SharedKernel.Access;
 using UniGate.SharedKernel.Outbox;
 using UniGate.SharedKernel.Results;
+using System.Text.Json;
 
 namespace UniGate.Access.Infrastructure.Scheduling;
 
@@ -32,7 +33,7 @@ public sealed class EfAccessRuleScheduler : IAccessRuleScheduler
 
             _db.OutboxMessages.Add(new OutboxMessage(
                 type: AccessOutboxTypes.RuleCreated,
-                payloadJson: System.Text.Json.JsonSerializer.Serialize(new
+                payloadJson: JsonSerializer.Serialize(new
                 {
                     ruleId = r.Id,
                     r.ZoneId,
@@ -55,37 +56,46 @@ public sealed class EfAccessRuleScheduler : IAccessRuleScheduler
         }
     }
 
-    public async Task<Result> UpdateScheduleAsync(Guid ruleId, RuleSchedule schedule, CancellationToken ct = default)
+    public async Task<Result> ReplaceWindowsAsync(Guid ruleId, RuleScheduleV2 schedule, CancellationToken ct = default)
     {
         try
         {
-            var r = await _db.Rules.FirstOrDefaultAsync(x => x.Id == ruleId, ct);
-            if (r is null)
+            var rule = await _db.Rules.FirstOrDefaultAsync(x => x.Id == ruleId, ct);
+            if (rule is null)
                 return Result.Failure(new Error("rule.not_found", "Rule not found."));
 
             try
             {
-                r.SetSchedule(schedule.DaysMask, schedule.StartTime, schedule.EndTime, schedule.ValidFrom, schedule.ValidTo);
-                r.SetActive(true);
+                rule.SetValidity(schedule.ValidFrom, schedule.ValidTo);
+                rule.SetActive(true);
             }
             catch (InvalidOperationException ex)
             {
-                return Result.Failure(new Error("rule.schedule_invalid", ex.Message));
+                return Result.Failure(new Error("rule.validity_invalid", ex.Message));
+            }
+
+            var existing = await _db.RuleWindows.Where(w => w.RuleId == ruleId).ToListAsync(ct);
+            _db.RuleWindows.RemoveRange(existing);
+
+            foreach (var w in schedule.Windows)
+            {
+                if (w.DayOfWeekIso is < 1 or > 7)
+                    return Result.Failure(Errors.Validation.Failed("DayOfWeekIso must be 1..7."));
+
+                _db.RuleWindows.Add(new RuleWindow(ruleId, w.DayOfWeekIso, w.StartTime, w.EndTime));
             }
 
             _db.OutboxMessages.Add(new OutboxMessage(
                 type: AccessOutboxTypes.RuleUpdatedSchedule,
-                payloadJson: System.Text.Json.JsonSerializer.Serialize(new
+                payloadJson: JsonSerializer.Serialize(new
                 {
-                    ruleId = r.Id,
-                    r.ZoneId,
-                    r.GroupId,
-                    r.IsActive,
-                    r.DaysMask,
-                    r.StartTime,
-                    r.EndTime,
-                    r.ValidFrom,
-                    r.ValidTo,
+                    ruleId = rule.Id,
+                    rule.ZoneId,
+                    rule.GroupId,
+                    rule.IsActive,
+                    rule.ValidFrom,
+                    rule.ValidTo,
+                    windows = schedule.Windows,
                     occurredAt = DateTimeOffset.UtcNow,
                     actorProvider = "timetable",
                     actorSubject = "sync"
@@ -98,7 +108,7 @@ public sealed class EfAccessRuleScheduler : IAccessRuleScheduler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "UpdateScheduleAsync failed");
+            _logger.LogError(ex, "ReplaceWindowsAsync failed");
             return Result.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }

@@ -35,12 +35,11 @@ public sealed class SyncTimetableToAccessUseCase
             var zoneId = g.Key.ZoneId;
             var groupId = g.Key.GroupId;
 
-            var daysMask = 0;
-            foreach (var s in g)
-                daysMask |= IsoDayToBit(s.DayOfWeekIso);
-
-            var start = g.Min(x => x.StartTime);
-            var end = g.Max(x => x.EndTime);
+            var windows = g
+                .Select(s => new RuleWindowDto(s.DayOfWeekIso, s.StartTime, s.EndTime))
+                .Distinct()
+                .OrderBy(w => w.DayOfWeekIso).ThenBy(w => w.StartTime)
+                .ToList();
 
             var validFrom = g.Select(x => x.ValidFrom).Where(x => x is not null).Min();
             var validTo = g.Select(x => x.ValidTo).Where(x => x is not null).Max();
@@ -49,8 +48,11 @@ public sealed class SyncTimetableToAccessUseCase
             if (!ensure.IsSuccess)
                 return Result<int>.Failure(ensure.Error);
 
-            var sched = new RuleSchedule(daysMask, start, end, validFrom, validTo);
-            var upd = await _scheduler.UpdateScheduleAsync(ensure.Value, sched, ct);
+            var upd = await _scheduler.ReplaceWindowsAsync(
+                ensure.Value,
+                new RuleScheduleV2(windows, validFrom, validTo),
+                ct);
+
             if (!upd.IsSuccess)
                 return Result<int>.Failure(upd.Error);
 
@@ -59,16 +61,4 @@ public sealed class SyncTimetableToAccessUseCase
 
         return Result<int>.Success(updated);
     }
-
-    private static int IsoDayToBit(int isoDay) => isoDay switch
-    {
-        1 => 1,
-        2 => 2,
-        3 => 4,
-        4 => 8,
-        5 => 16,
-        6 => 32,
-        7 => 64,
-        _ => 0
-    };
 }

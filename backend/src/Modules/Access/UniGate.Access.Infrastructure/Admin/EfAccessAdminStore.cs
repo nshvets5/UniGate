@@ -354,6 +354,24 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
     {
         try
         {
+            if (cmd.ZoneId == Guid.Empty || cmd.GroupId == Guid.Empty)
+                return Result<Guid>.Failure(Errors.Validation.Failed("ZoneId and GroupId are required."));
+
+            if (cmd.Windows is null || cmd.Windows.Count == 0)
+                return Result<Guid>.Failure(Errors.Validation.Failed("At least one window is required."));
+
+            foreach (var w in cmd.Windows)
+            {
+                if (w.DayOfWeekIso is < 1 or > 7)
+                    return Result<Guid>.Failure(Errors.Validation.Failed("DayOfWeekIso must be 1..7."));
+
+                if (w.StartTime == w.EndTime)
+                    return Result<Guid>.Failure(Errors.Validation.Failed("StartTime and EndTime cannot be equal."));
+            }
+
+            if (cmd.ValidFrom is not null && cmd.ValidTo is not null && cmd.ValidTo < cmd.ValidFrom)
+                return Result<Guid>.Failure(Errors.Validation.Failed("ValidTo must be >= ValidFrom."));
+
             var zoneExists = await _db.Zones.AsNoTracking().AnyAsync(z => z.Id == cmd.ZoneId, ct);
             if (!zoneExists)
                 return Result<Guid>.Failure(new Error("rule.zone_not_found", "Zone not found."));
@@ -364,33 +382,38 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             if (exists)
                 return Result<Guid>.Failure(new Error("rule.duplicate", "Rule for this zone and group already exists."));
 
-            var r = new AccessRule(cmd.ZoneId, cmd.GroupId);
+            var rule = new AccessRule(cmd.ZoneId, cmd.GroupId);
+
             try
             {
-                r.SetSchedule(cmd.DaysMask, cmd.StartTime, cmd.EndTime, cmd.ValidFrom, cmd.ValidTo);
+                rule.SetValidity(cmd.ValidFrom, cmd.ValidTo);
             }
             catch (InvalidOperationException ex)
             {
-                return Result<Guid>.Failure(new Error("rule.schedule_invalid", ex.Message));
+                return Result<Guid>.Failure(new Error("rule.validity_invalid", ex.Message));
             }
-            _db.Rules.Add(r);
+
+            _db.Rules.Add(rule);
+
+            foreach (var w in cmd.Windows)
+            {
+                _db.RuleWindows.Add(new RuleWindow(rule.Id, w.DayOfWeekIso, w.StartTime, w.EndTime));
+            }
 
             Emit(AccessOutboxTypes.RuleCreated, new
             {
-                ruleId = r.Id,
-                r.ZoneId,
-                r.GroupId,
-                r.IsActive,
-                r.DaysMask,
-                r.StartTime,
-                r.EndTime,
-                r.ValidFrom,
-                r.ValidTo,
+                ruleId = rule.Id,
+                rule.ZoneId,
+                rule.GroupId,
+                rule.IsActive,
+                rule.ValidFrom,
+                rule.ValidTo,
+                windows = cmd.Windows,
                 Actor = Actor()
             });
 
             await _db.SaveChangesAsync(ct);
-            return Result<Guid>.Success(r.Id);
+            return Result<Guid>.Success(rule.Id);
         }
         catch (DbUpdateException ex)
         {
@@ -433,17 +456,47 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
     {
         try
         {
+            if (cmd.Id == Guid.Empty)
+                return Result.Failure(Errors.Validation.Failed("Id is required."));
+
+            if (cmd.Windows is null || cmd.Windows.Count == 0)
+                return Result.Failure(Errors.Validation.Failed("At least one window is required."));
+
+            foreach (var w in cmd.Windows)
+            {
+                if (w.DayOfWeekIso is < 1 or > 7)
+                    return Result.Failure(Errors.Validation.Failed("DayOfWeekIso must be 1..7."));
+
+                if (w.StartTime == w.EndTime)
+                    return Result.Failure(Errors.Validation.Failed("StartTime and EndTime cannot be equal."));
+            }
+
+            if (cmd.ValidFrom is not null && cmd.ValidTo is not null && cmd.ValidTo < cmd.ValidFrom)
+                return Result.Failure(Errors.Validation.Failed("ValidTo must be >= ValidFrom."));
+
             var r = await _db.Rules.FirstOrDefaultAsync(x => x.Id == cmd.Id, ct);
             if (r is null)
                 return Result.Failure(new Error("rule.not_found", "Rule not found."));
 
             try
             {
-                r.SetSchedule(cmd.DaysMask, cmd.StartTime, cmd.EndTime, cmd.ValidFrom, cmd.ValidTo);
+                r.SetValidity(cmd.ValidFrom, cmd.ValidTo);
+                r.SetActive(true);
             }
             catch (InvalidOperationException ex)
             {
-                return Result.Failure(new Error("rule.schedule_invalid", ex.Message));
+                return Result.Failure(new Error("rule.validity_invalid", ex.Message));
+            }
+
+            var existing = await _db.RuleWindows
+                .Where(w => w.RuleId == r.Id)
+                .ToListAsync(ct);
+
+            _db.RuleWindows.RemoveRange(existing);
+
+            foreach (var w in cmd.Windows)
+            {
+                _db.RuleWindows.Add(new RuleWindow(r.Id, w.DayOfWeekIso, w.StartTime, w.EndTime));
             }
 
             Emit(AccessOutboxTypes.RuleUpdatedSchedule, new
@@ -452,16 +505,19 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
                 r.ZoneId,
                 r.GroupId,
                 r.IsActive,
-                r.DaysMask,
-                r.StartTime,
-                r.EndTime,
                 r.ValidFrom,
                 r.ValidTo,
+                windows = cmd.Windows,
                 Actor = Actor()
             });
 
             await _db.SaveChangesAsync(ct);
             return Result.Success();
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(ex, "UpdateRuleSchedule DbUpdateException");
+            return Result.Failure(Errors.Infrastructure.DatabaseFailure);
         }
         catch (Exception ex)
         {

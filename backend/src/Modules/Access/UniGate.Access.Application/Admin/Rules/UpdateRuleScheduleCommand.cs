@@ -1,9 +1,9 @@
-namespace UniGate.Access.Application.Admin;
+using UniGate.SharedKernel.Access;
+
+namespace UniGate.Access.Application.Admin.Rules;
 
 public sealed record UpdateRuleScheduleCommand(
     Guid Id,
-    int? DaysMask,
-    TimeOnly? StartTime,
-    TimeOnly? EndTime,
+    IReadOnlyList<RuleWindowDto> Windows,
     DateTimeOffset? ValidFrom,
     DateTimeOffset? ValidTo);

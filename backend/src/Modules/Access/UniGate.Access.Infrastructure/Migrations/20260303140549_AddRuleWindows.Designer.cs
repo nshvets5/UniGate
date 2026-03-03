@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using UniGate.Access.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using UniGate.Access.Infrastructure.Persistence;
 namespace UniGate.Access.Infrastructure.Migrations
 {
     [DbContext(typeof(AccessDbContext))]
-    partial class AccessDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260303140549_AddRuleWindows")]
+    partial class AddRuleWindows
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
