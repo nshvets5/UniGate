@@ -50,9 +50,9 @@ public sealed class ZonesController : ApiControllerBase
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateZoneCommand body, CancellationToken ct)
         => ToActionResult(await _update.ExecuteAsync(body with { Id = id }, ct));
 
-    public sealed record SetActiveRequest(bool IsActive);
+    public sealed record SetActiveZoneRequest(bool IsActive);
 
     [HttpPatch("{id:guid}/active")]
-    public async Task<IActionResult> SetActive([FromRoute] Guid id, [FromBody] SetActiveRequest req, CancellationToken ct)
+    public async Task<IActionResult> SetActive([FromRoute] Guid id, [FromBody] SetActiveZoneRequest req, CancellationToken ct)
         => ToActionResult(await _active.ExecuteAsync(id, req.IsActive, ct));
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using UniGate.Api.Controllers.Base;
 using UniGate.Api.Errors;
 using UniGate.Api.Extensions;
+using UniGate.Directory.Application.Rooms;
 using UniGate.Timetable.Application;
 
 namespace UniGate.Api.Controllers;
@@ -13,12 +14,14 @@ public sealed class TimetableController : ApiControllerBase
 {
     private readonly ITimetableStore _store;
     private readonly SyncTimetableToAccessUseCase _sync;
+    private readonly IRoomsStore _rooms;
 
-    public TimetableController(ITimetableStore store, SyncTimetableToAccessUseCase sync, IApiErrorMapper mapper)
+    public TimetableController(ITimetableStore store, SyncTimetableToAccessUseCase sync, IRoomsStore rooms, IApiErrorMapper mapper)
         : base(mapper)
     {
         _store = store;
         _sync = sync;
+        _rooms = rooms;
     }
 
     public sealed class ImportCsvRequest
@@ -28,7 +31,6 @@ public sealed class TimetableController : ApiControllerBase
 
     [HttpPost("import/csv")]
     [RequestSizeLimit(10_000_000)]
-    [Consumes("multipart/form-data")]
     public async Task<IActionResult> ImportCsv([FromForm] ImportCsvRequest req, CancellationToken ct)
     {
         var file = req.File;
@@ -47,6 +49,7 @@ public sealed class TimetableController : ApiControllerBase
         {
             var line = await reader.ReadLineAsync(ct);
             lineNo++;
+
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
@@ -56,15 +59,30 @@ public sealed class TimetableController : ApiControllerBase
             var parts = line.Split(',');
             if (parts.Length < 5)
                 return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
-                    new UniGate.SharedKernel.Results.Error("timetable.csv_invalid", $"Line {lineNo}: expected at least 5 columns.")));
+                    new UniGate.SharedKernel.Results.Error("timetable.csv_invalid",
+                        $"Line {lineNo}: expected at least 5 columns (groupId,roomCode,dayIso,startTime,endTime).")));
 
             if (!Guid.TryParse(parts[0].Trim(), out var groupId))
                 return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
                     new UniGate.SharedKernel.Results.Error("timetable.csv_invalid", $"Line {lineNo}: invalid groupId.")));
 
-            if (!Guid.TryParse(parts[1].Trim(), out var zoneId))
+            var roomCode = parts[1].Trim();
+            if (string.IsNullOrWhiteSpace(roomCode))
                 return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
-                    new UniGate.SharedKernel.Results.Error("timetable.csv_invalid", $"Line {lineNo}: invalid zoneId.")));
+                    new UniGate.SharedKernel.Results.Error("timetable.csv_invalid", $"Line {lineNo}: roomCode is required.")));
+
+            var roomRes = await _rooms.GetByCodeAsync(roomCode, ct);
+            if (!roomRes.IsSuccess)
+                return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                    new UniGate.SharedKernel.Results.Error("timetable.room_not_found",
+                        $"Line {lineNo}: room '{roomCode}' not found.")));
+
+            if (!roomRes.Value.IsActive)
+                return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                    new UniGate.SharedKernel.Results.Error("timetable.room_inactive",
+                        $"Line {lineNo}: room '{roomCode}' is inactive.")));
+
+            var zoneId = roomRes.Value.ZoneId;
 
             if (!int.TryParse(parts[2].Trim(), out var dayIso) || dayIso < 1 || dayIso > 7)
                 return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
@@ -78,6 +96,10 @@ public sealed class TimetableController : ApiControllerBase
                 return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
                     new UniGate.SharedKernel.Results.Error("timetable.csv_invalid", $"Line {lineNo}: invalid endTime.")));
 
+            if (start == end)
+                return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                    new UniGate.SharedKernel.Results.Error("timetable.csv_invalid", $"Line {lineNo}: startTime and endTime cannot be equal.")));
+
             DateTimeOffset? validFrom = null;
             DateTimeOffset? validTo = null;
 
@@ -86,6 +108,10 @@ public sealed class TimetableController : ApiControllerBase
 
             if (parts.Length > 6 && !string.IsNullOrWhiteSpace(parts[6]) && DateTimeOffset.TryParse(parts[6].Trim(), out var vt))
                 validTo = vt;
+
+            if (validFrom is not null && validTo is not null && validTo < validFrom)
+                return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                    new UniGate.SharedKernel.Results.Error("timetable.csv_invalid", $"Line {lineNo}: validTo must be >= validFrom.")));
 
             var title = parts.Length > 7 ? string.Join(',', parts.Skip(7)).Trim() : null;
 

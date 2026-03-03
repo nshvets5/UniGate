@@ -38,9 +38,9 @@ public sealed class RoomsController : ApiControllerBase
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateRoomCommand body, CancellationToken ct)
         => ToActionResult(await _store.UpdateAsync(body with { Id = id }, ct));
 
-    public sealed record SetActiveRequest(bool IsActive);
+    public sealed record SetActiveRoomRequest(bool IsActive);
 
     [HttpPatch("{id:guid}/active")]
-    public async Task<IActionResult> SetActive([FromRoute] Guid id, [FromBody] SetActiveRequest req, CancellationToken ct)
+    public async Task<IActionResult> SetActive([FromRoute] Guid id, [FromBody] SetActiveRoomRequest req, CancellationToken ct)
         => ToActionResult(await _store.SetActiveAsync(id, req.IsActive, ct));
 }
