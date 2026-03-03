@@ -4,10 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using UniGate.Directory.Application.Groups;
 using UniGate.Directory.Application.Groups.UseCases;
 using UniGate.Directory.Application.Me;
+using UniGate.Directory.Application.Rooms;
 using UniGate.Directory.Application.Students;
 using UniGate.Directory.Application.Students.UseCases;
 using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Directory.Infrastructure.Queries;
+using UniGate.Directory.Infrastructure.Rooms;
 using UniGate.Directory.Infrastructure.Stores;
 using UniGate.SharedKernel.Directory;
 
@@ -49,6 +51,8 @@ public static class DirectoryModuleServiceCollectionExtensions
         services.AddScoped<SetStudentActiveUseCase>();
         services.AddScoped<ChangeStudentGroupUseCase>();
         services.AddScoped<BindStudentProfileUseCase>();
+
+        services.AddScoped<IRoomsStore, EfRoomsStore>();
 
         services.AddScoped<IMyDirectoryQuery, EfMyDirectoryQuery>();
         services.AddScoped<GetMyStudentUseCase>();

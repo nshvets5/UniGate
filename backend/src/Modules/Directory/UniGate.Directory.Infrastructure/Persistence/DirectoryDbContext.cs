@@ -10,6 +10,7 @@ public sealed class DirectoryDbContext : DbContext
 
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<Student> Students => Set<Student>();
+    public DbSet<Room> Rooms => Set<Room>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -57,6 +58,21 @@ public sealed class DirectoryDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.GroupId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Room>(b =>
+        {
+            b.ToTable("rooms");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Code).HasMaxLength(50).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            b.Property(x => x.ZoneId).IsRequired();
+            b.Property(x => x.IsActive).IsRequired();
+            b.Property(x => x.CreatedAt).IsRequired();
+
+            b.HasIndex(x => x.Code).IsUnique();
+            b.HasIndex(x => x.ZoneId);
         });
 
         modelBuilder.Entity<OutboxMessage>(b =>
