@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Timetable.Application;
+using UniGate.Timetable.Application.Import.Csv;
 using UniGate.Timetable.Application.Import.Ics;
+using UniGate.Timetable.Infrastructure.Import.Csv;
 using UniGate.Timetable.Infrastructure.Import.Ics;
 using UniGate.Timetable.Infrastructure.Persistence;
 using UniGate.Timetable.Infrastructure.Stores;
@@ -40,6 +42,8 @@ public static class TimetableModuleServiceCollectionExtensions
 
         services.AddScoped<IIcsTimetableParser, IcalNetIcsTimetableParser>();
         services.AddScoped<ImportIcsTimetableUseCase>();
+        services.AddScoped<ICsvTimetableParser, CsvTimetableParser>();
+        services.AddScoped<ImportCsvTimetableUseCase>();
 
         return services;
     }
