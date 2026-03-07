@@ -16,7 +16,7 @@ public sealed class SyncTimetableToAccessUseCase
 
     public async Task<Result<int>> ExecuteAsync(CancellationToken ct = default)
     {
-        var slotsRes = await _store.ListSlotsAsync(take: 10_000, ct);
+        var slotsRes = await _store.ListActiveSlotsAsync(take: 10_000, ct);
         if (!slotsRes.IsSuccess)
             return Result<int>.Failure(slotsRes.Error);
 

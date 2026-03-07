@@ -62,7 +62,7 @@ public sealed class TimetableController : ApiControllerBase
 
     [HttpGet("slots")]
     public async Task<IActionResult> ListSlots([FromQuery] int take = 200, CancellationToken ct = default)
-        => ToActionResult(await _store.ListSlotsAsync(Math.Clamp(take, 1, 2000), ct));
+        => ToActionResult(await _store.ListActiveSlotsAsync(Math.Clamp(take, 1, 2000), ct));
 
     [HttpPost("import/ics")]
     [RequestSizeLimit(10_000_000)]
@@ -91,4 +91,12 @@ public sealed class TimetableController : ApiControllerBase
 
         return ToActionResult(res);
     }
+
+    [HttpGet("batches")]
+    public async Task<IActionResult> ListBatches([FromQuery] int take = 50, CancellationToken ct = default)
+    => ToActionResult(await _store.ListBatchesAsync(Math.Clamp(take, 1, 200), ct));
+
+    [HttpPost("batches/{batchId:guid}/activate")]
+    public async Task<IActionResult> ActivateBatch([FromRoute] Guid batchId, CancellationToken ct)
+        => ToActionResult(await _store.ActivateBatchAsync(batchId, ct));
 }

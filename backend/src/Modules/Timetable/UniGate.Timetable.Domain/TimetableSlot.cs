@@ -4,6 +4,7 @@ public sealed class TimetableSlot
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
 
+    public Guid BatchId { get; private set; }
     public Guid GroupId { get; private set; }
     public Guid ZoneId { get; private set; }
 
@@ -22,8 +23,18 @@ public sealed class TimetableSlot
 
     private TimetableSlot() { }
 
-    public TimetableSlot(Guid groupId, Guid zoneId, int dayOfWeekIso, TimeOnly start, TimeOnly end, DateTimeOffset? validFrom, DateTimeOffset? validTo, string? title)
+    public TimetableSlot(
+        Guid batchId,
+        Guid groupId,
+        Guid zoneId,
+        int dayOfWeekIso,
+        TimeOnly start,
+        TimeOnly end,
+        DateTimeOffset? validFrom,
+        DateTimeOffset? validTo,
+        string? title)
     {
+        BatchId = batchId;
         GroupId = groupId;
         ZoneId = zoneId;
         DayOfWeekIso = dayOfWeekIso;

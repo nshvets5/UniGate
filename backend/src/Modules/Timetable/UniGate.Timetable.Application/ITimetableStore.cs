@@ -4,8 +4,21 @@ namespace UniGate.Timetable.Application;
 
 public interface ITimetableStore
 {
-    Task<Result<int>> ReplaceAllSlotsAsync(IReadOnlyList<ImportSlotRow> rows, CancellationToken ct = default);
-    Task<Result<IReadOnlyList<ImportSlotRow>>> ListSlotsAsync(int take, CancellationToken ct = default);
+    Task<Result<Guid>> ImportBatchAsync(
+        string sourceType,
+        string? sourceFileName,
+        string? importedByProvider,
+        string? importedBySubject,
+        IReadOnlyList<ImportSlotRow> rows,
+        int totalRows,
+        int skippedRows,
+        CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<ImportSlotRow>>> ListActiveSlotsAsync(int take, CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<TimetableImportBatchDto>>> ListBatchesAsync(int take, CancellationToken ct = default);
+
+    Task<Result> ActivateBatchAsync(Guid batchId, CancellationToken ct = default);
 }
 
 public sealed record ImportSlotRow(
@@ -17,3 +30,15 @@ public sealed record ImportSlotRow(
     DateTimeOffset? ValidFrom,
     DateTimeOffset? ValidTo,
     string? Title);
+
+public sealed record TimetableImportBatchDto(
+    Guid Id,
+    string SourceType,
+    string? SourceFileName,
+    string? ImportedByProvider,
+    string? ImportedBySubject,
+    int TotalRows,
+    int ImportedRows,
+    int SkippedRows,
+    bool IsActive,
+    DateTimeOffset CreatedAt);

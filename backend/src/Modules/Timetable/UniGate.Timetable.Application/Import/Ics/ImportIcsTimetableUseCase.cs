@@ -1,3 +1,4 @@
+using UniGate.SharedKernel.Auth;
 using UniGate.SharedKernel.Directory;
 using UniGate.SharedKernel.Files;
 using UniGate.SharedKernel.Results;
@@ -10,17 +11,23 @@ public sealed class ImportIcsTimetableUseCase
     private readonly IIcsTimetableParser _parser;
     private readonly IRoomLookup _rooms;
     private readonly ITimetableStore _store;
+    private readonly ICurrentUser _currentUser;
+    private readonly IIdentityProvider _identityProvider;
 
     public ImportIcsTimetableUseCase(
         ITextFileReader fileReader,
         IIcsTimetableParser parser,
         IRoomLookup rooms,
-        ITimetableStore store)
+        ITimetableStore store,
+        ICurrentUser currentUser,
+        IIdentityProvider identityProvider)
     {
         _fileReader = fileReader;
         _parser = parser;
         _rooms = rooms;
         _store = store;
+        _currentUser = currentUser;
+        _identityProvider = identityProvider;
     }
 
     public async Task<Result<ImportReport>> ExecuteAsync(
@@ -86,7 +93,16 @@ public sealed class ImportIcsTimetableUseCase
 
         if (validRows.Count > 0)
         {
-            var storeRes = await _store.ReplaceAllSlotsAsync(validRows, ct);
+            var storeRes = await _store.ImportBatchAsync(
+                sourceType: "ics",
+                sourceFileName: "ics-upload",
+                importedByProvider: _identityProvider.Name,
+                importedBySubject: _currentUser.Subject,
+                rows: validRows,
+                totalRows: totalRows,
+                skippedRows: issues.Count,
+                ct: ct);
+
             if (!storeRes.IsSuccess)
                 return Result<ImportReport>.Failure(storeRes.Error);
         }
