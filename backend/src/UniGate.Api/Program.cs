@@ -4,6 +4,7 @@ using UniGate.Api.Auth;
 using UniGate.Api.Endpoints;
 using UniGate.Api.Errors;
 using UniGate.Api.Extensions;
+using UniGate.Api.Files;
 using UniGate.Api.HealthChecks;
 using UniGate.Api.Middleware;
 using UniGate.Api.Observability;
@@ -16,6 +17,7 @@ using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Iam.Infrastructure.DependencyInjection;
 using UniGate.Iam.Infrastructure.Persistence;
 using UniGate.SharedKernel.Auth;
+using UniGate.SharedKernel.Files;
 using UniGate.Timetable.Infrastructure.DependencyInjection;
 using UniGate.Timetable.Infrastructure.Persistence;
 using UniGate.Timetable.Infrastructure.Sync;
@@ -80,6 +82,7 @@ builder.Services.AddAccessModule(builder.Configuration);
 builder.Services.AddTimetableModule(builder.Configuration);
 
 builder.Services.AddScoped<ICurrentProfileIdAccessor, CurrentProfileIdAccessor>();
+builder.Services.AddScoped<ITextFileReader, Utf8TextFileReader>();
 
 builder.Services.AddHostedService<UniGate.Api.Outbox.OutboxProcessorHostedService>();
 

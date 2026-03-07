@@ -1,16 +1,23 @@
 using UniGate.SharedKernel.Directory;
+using UniGate.SharedKernel.Files;
 using UniGate.SharedKernel.Results;
 
 namespace UniGate.Timetable.Application.Import.Ics;
 
 public sealed class ImportIcsTimetableUseCase
 {
+    private readonly ITextFileReader _fileReader;
     private readonly IIcsTimetableParser _parser;
     private readonly IRoomLookup _rooms;
     private readonly ITimetableStore _store;
 
-    public ImportIcsTimetableUseCase(IIcsTimetableParser parser, IRoomLookup rooms, ITimetableStore store)
+    public ImportIcsTimetableUseCase(
+        ITextFileReader fileReader,
+        IIcsTimetableParser parser,
+        IRoomLookup rooms,
+        ITimetableStore store)
     {
+        _fileReader = fileReader;
         _parser = parser;
         _rooms = rooms;
         _store = store;
@@ -18,7 +25,7 @@ public sealed class ImportIcsTimetableUseCase
 
     public async Task<Result<int>> ExecuteAsync(
         Guid groupId,
-        string icsText,
+        Stream fileStream,
         DateOnly fromDate,
         int rangeDays,
         string timeZoneId,
@@ -27,13 +34,20 @@ public sealed class ImportIcsTimetableUseCase
         if (groupId == Guid.Empty)
             return Result<int>.Failure(Errors.Validation.Failed("groupId is required."));
 
-        if (string.IsNullOrWhiteSpace(icsText))
-            return Result<int>.Failure(Errors.Validation.Failed("ICS content is empty."));
+        if (fileStream is null)
+            return Result<int>.Failure(Errors.Validation.Failed("File stream is required."));
 
         if (rangeDays is < 7 or > 366)
             return Result<int>.Failure(Errors.Validation.Failed("rangeDays must be between 7 and 366."));
 
-        var parsed = await _parser.ParseAsync(icsText, fromDate, rangeDays, timeZoneId, ct);
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+            return Result<int>.Failure(Errors.Validation.Failed("timeZoneId is required."));
+
+        var fileText = await _fileReader.ReadAllTextAsync(fileStream, ct);
+        if (!fileText.IsSuccess)
+            return Result<int>.Failure(fileText.Error);
+
+        var parsed = await _parser.ParseAsync(fileText.Value, fromDate, rangeDays, timeZoneId, ct);
         if (!parsed.IsSuccess)
             return Result<int>.Failure(parsed.Error);
 

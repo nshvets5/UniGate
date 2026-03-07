@@ -152,14 +152,11 @@ public sealed class TimetableController : ApiControllerBase
             return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
                 UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
 
-        string icsText;
-        using (var stream = file.OpenReadStream())
-        using (var reader = new StreamReader(stream))
-            icsText = await reader.ReadToEndAsync(ct);
+        await using var stream = file.OpenReadStream();
 
         var res = await _importIcs.ExecuteAsync(
             groupId: groupId,
-            icsText: icsText,
+            fileStream: stream,
             fromDate: DateOnly.FromDateTime(DateTime.UtcNow),
             rangeDays: rangeDays,
             timeZoneId: timeZoneId,
