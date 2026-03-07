@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Timetable.Application;
+using UniGate.Timetable.Application.Import.Ics;
+using UniGate.Timetable.Infrastructure.Import.Ics;
 using UniGate.Timetable.Infrastructure.Persistence;
 using UniGate.Timetable.Infrastructure.Stores;
 using UniGate.Timetable.Infrastructure.Sync;
@@ -35,6 +37,9 @@ public static class TimetableModuleServiceCollectionExtensions
         services.AddSingleton<TimetableSyncStatus>();
         services.AddSingleton<TimetableSyncHealthCheck>();
         services.AddSingleton<TimetableSyncStatusEvaluator>();
+
+        services.AddScoped<IIcsTimetableParser, IcalNetIcsTimetableParser>();
+        services.AddScoped<ImportIcsTimetableUseCase>();
 
         return services;
     }

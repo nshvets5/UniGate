@@ -57,6 +57,7 @@ public static class DirectoryModuleServiceCollectionExtensions
         services.AddScoped<IMyDirectoryQuery, EfMyDirectoryQuery>();
         services.AddScoped<GetMyStudentUseCase>();
         services.AddScoped<IStudentLookup, EfStudentLookup>();
+        services.AddScoped<IRoomLookup, EfRoomLookup>();
 
         return services;
     }
