@@ -28,10 +28,11 @@ public abstract class ApiControllerBase : ControllerBase
             type: type,
             title: error.Code,
             detail: error.Message,
-            statusCode: status,
-            extensions: new Dictionary<string, object?>
-            {
-                ["traceId"] = HttpContext.TraceIdentifier
-            });
+            statusCode: status
+            //extensions: new Dictionary<string, object?>
+            //{
+            //    ["traceId"] = HttpContext.TraceIdentifier
+            //}
+            );
     }
 }

@@ -1,3 +1,8 @@
+using Ical.Net;
+using Ical.Net.CalendarComponents;
+using Ical.Net.DataTypes;
+using Ical.Net.Evaluation;
+using Ical.Net.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UniGate.Api.Controllers.Base;
@@ -129,4 +134,173 @@ public sealed class TimetableController : ApiControllerBase
     [HttpGet("slots")]
     public async Task<IActionResult> ListSlots([FromQuery] int take = 200, CancellationToken ct = default)
         => ToActionResult(await _store.ListSlotsAsync(Math.Clamp(take, 1, 2000), ct));
+    public sealed class ImportIcsRequest
+    {
+        public IFormFile File { get; set; } = default!;
+    }
+
+    [HttpPost("import/ics")]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> ImportIcs([FromQuery] Guid groupId, [FromForm] ImportIcsRequest req, CancellationToken ct)
+    {
+        var file = req.File;
+        
+        if (groupId == Guid.Empty)
+            return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                UniGate.SharedKernel.Results.Errors.Validation.Failed("groupId query parameter is required.")));
+
+        if (file is null || file.Length == 0)
+            return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
+
+        var fromUtc = DateTimeOffset.UtcNow.Date;
+        var toUtc = fromUtc.AddDays(120);
+
+        string icsText;
+        using (var stream = file.OpenReadStream())
+        using (var reader = new StreamReader(stream))
+        {
+            icsText = await reader.ReadToEndAsync(ct);
+        }
+
+        Calendar calendar;
+        try
+        {
+            var serializer = new CalendarSerializer();
+            calendar = Calendar.Load(icsText);
+        }
+        catch (Exception ex)
+        {
+            return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                new UniGate.SharedKernel.Results.Error("timetable.ics_invalid", $"ICS parse error: {ex.Message}")));
+        }
+
+        TimeZoneInfo tz;
+        try { tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome"); }
+        catch { tz = TimeZoneInfo.Utc; }
+
+        var rows = new List<ImportSlotRow>();
+
+        foreach (var ev in calendar.Events ?? Enumerable.Empty<CalendarEvent>())
+        {
+            if (ev?.DtStart is null || ev.DtEnd is null)
+                continue;
+
+            var roomCode = ExtractRoomCode(ev.Location);
+            if (string.IsNullOrWhiteSpace(roomCode))
+            {
+                return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                    new UniGate.SharedKernel.Results.Error("timetable.ics_missing_location",
+                        $"Event '{ev.Summary ?? "(no summary)"}' has empty LOCATION (roomCode required).")));
+            }
+
+            var roomRes = await _rooms.GetByCodeAsync(roomCode, ct);
+            if (!roomRes.IsSuccess)
+                return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                    new UniGate.SharedKernel.Results.Error("timetable.room_not_found",
+                        $"Room '{roomCode}' not found (LOCATION='{ev.Location}').")));
+
+            if (!roomRes.Value.IsActive)
+                return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                    new UniGate.SharedKernel.Results.Error("timetable.room_inactive",
+                        $"Room '{roomCode}' is inactive.")));
+
+            var zoneId = roomRes.Value.ZoneId;
+            var title = string.IsNullOrWhiteSpace(ev.Summary) ? null : ev.Summary.Trim();
+
+            IEnumerable<Occurrence> occurrences;
+            try
+            {
+                var fromLocal = TimeZoneInfo.ConvertTimeFromUtc(fromUtc, tz);
+                var toLocal = TimeZoneInfo.ConvertTimeFromUtc(toUtc, tz);
+
+                var fromCal = new CalDateTime(fromLocal, "Europe/Rome");
+                var toCal = new CalDateTime(toLocal, "Europe/Rome");
+
+                occurrences = ev
+                    .GetOccurrences(fromCal)
+                    .TakeWhileBefore(toCal);
+            }
+            catch
+            {
+                occurrences = new[]
+                {
+                new Occurrence(ev, new Period(ev.DtStart, ev.DtEnd))
+            };
+            }
+
+            foreach (var occ in occurrences)
+            {
+                var period = occ.Period;
+                if (period is null)
+                    continue;
+
+                var start = period.StartTime?.Value;
+                var end = period.EndTime?.Value;
+
+                if (start is null || end is null)
+                    continue;
+
+                var startUtc = new DateTimeOffset(DateTime.SpecifyKind(start.Value, DateTimeKind.Local)).ToUniversalTime();
+                var endUtc = new DateTimeOffset(DateTime.SpecifyKind(end.Value, DateTimeKind.Local)).ToUniversalTime();
+
+                var startLocal = TimeZoneInfo.ConvertTime(startUtc, tz);
+                var endLocal = TimeZoneInfo.ConvertTime(endUtc, tz);
+
+                var dayIso = startLocal.DayOfWeek switch
+                {
+                    DayOfWeek.Monday => 1,
+                    DayOfWeek.Tuesday => 2,
+                    DayOfWeek.Wednesday => 3,
+                    DayOfWeek.Thursday => 4,
+                    DayOfWeek.Friday => 5,
+                    DayOfWeek.Saturday => 6,
+                    DayOfWeek.Sunday => 7,
+                    _ => 0
+                };
+
+                if (dayIso == 0)
+                    continue;
+
+                var startTime = TimeOnly.FromDateTime(startLocal.DateTime);
+                var endTime = TimeOnly.FromDateTime(endLocal.DateTime);
+
+                if (startTime == endTime)
+                    continue;
+
+                rows.Add(new ImportSlotRow(
+                    GroupId: groupId,
+                    ZoneId: zoneId,
+                    DayOfWeekIso: dayIso,
+                    StartTime: startTime,
+                    EndTime: endTime,
+                    ValidFrom: null,
+                    ValidTo: null,
+                    Title: title
+                ));
+            }
+        }
+
+        if (rows.Count == 0)
+            return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                new UniGate.SharedKernel.Results.Error("timetable.ics_empty", "No valid events found in ICS.")));
+
+        var res = await _store.ReplaceAllSlotsAsync(rows, ct);
+        return ToActionResult(res);
+    }
+
+    private static string? ExtractRoomCode(string? location)
+    {
+        if (string.IsNullOrWhiteSpace(location))
+            return null;
+
+        var raw = location.Trim();
+
+        var separators = new[] { ',', ';' };
+        var first = raw.Split(separators, 2)[0].Trim();
+
+        var code = first.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+
+        return string.IsNullOrWhiteSpace(code) ? null : code;
+    }
 }
