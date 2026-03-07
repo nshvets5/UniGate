@@ -3,6 +3,7 @@ using UniGate.SharedKernel.Results;
 namespace UniGate.Timetable.Application.Import.Csv;
 
 public sealed record ParsedCsvSlot(
+    int LineNumber,
     Guid GroupId,
     string RoomCode,
     int DayOfWeekIso,
@@ -12,9 +13,13 @@ public sealed record ParsedCsvSlot(
     DateTimeOffset? ValidTo,
     string? Title);
 
+public sealed record CsvParseResult(
+    IReadOnlyList<ParsedCsvSlot> Rows,
+    IReadOnlyList<Import.ImportIssue> Issues);
+
 public interface ICsvTimetableParser
 {
-    Task<Result<IReadOnlyList<ParsedCsvSlot>>> ParseAsync(
+    Task<Result<CsvParseResult>> ParseAsync(
         string csvText,
         CancellationToken ct = default);
 }

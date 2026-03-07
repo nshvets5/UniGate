@@ -23,7 +23,7 @@ public sealed class ImportIcsTimetableUseCase
         _store = store;
     }
 
-    public async Task<Result<int>> ExecuteAsync(
+    public async Task<Result<ImportReport>> ExecuteAsync(
         Guid groupId,
         Stream fileStream,
         DateOnly fromDate,
@@ -32,43 +32,45 @@ public sealed class ImportIcsTimetableUseCase
         CancellationToken ct = default)
     {
         if (groupId == Guid.Empty)
-            return Result<int>.Failure(Errors.Validation.Failed("groupId is required."));
+            return Result<ImportReport>.Failure(Errors.Validation.Failed("groupId is required."));
 
         if (fileStream is null)
-            return Result<int>.Failure(Errors.Validation.Failed("File stream is required."));
+            return Result<ImportReport>.Failure(Errors.Validation.Failed("File stream is required."));
 
         if (rangeDays is < 7 or > 366)
-            return Result<int>.Failure(Errors.Validation.Failed("rangeDays must be between 7 and 366."));
+            return Result<ImportReport>.Failure(Errors.Validation.Failed("rangeDays must be between 7 and 366."));
 
         if (string.IsNullOrWhiteSpace(timeZoneId))
-            return Result<int>.Failure(Errors.Validation.Failed("timeZoneId is required."));
+            return Result<ImportReport>.Failure(Errors.Validation.Failed("timeZoneId is required."));
 
         var fileText = await _fileReader.ReadAllTextAsync(fileStream, ct);
         if (!fileText.IsSuccess)
-            return Result<int>.Failure(fileText.Error);
+            return Result<ImportReport>.Failure(fileText.Error);
 
         var parsed = await _parser.ParseAsync(fileText.Value, fromDate, rangeDays, timeZoneId, ct);
         if (!parsed.IsSuccess)
-            return Result<int>.Failure(parsed.Error);
+            return Result<ImportReport>.Failure(parsed.Error);
 
-        if (parsed.Value.Count == 0)
-            return Result<int>.Failure(new Error("timetable.ics_empty", "No valid events found in ICS."));
+        var issues = parsed.Value.Issues.ToList();
+        var validRows = new List<ImportSlotRow>();
 
-        var rows = new List<ImportSlotRow>(parsed.Value.Count);
-
-        foreach (var s in parsed.Value)
+        foreach (var s in parsed.Value.Rows)
         {
-            if (string.IsNullOrWhiteSpace(s.RoomCode))
-                return Result<int>.Failure(new Error("timetable.ics_missing_location", "RoomCode is missing."));
-
             var roomRes = await _rooms.FindByCodeAsync(s.RoomCode, ct);
+
             if (!roomRes.IsSuccess)
-                return Result<int>.Failure(new Error("timetable.room_not_found", $"Room '{s.RoomCode}' not found."));
+            {
+                issues.Add(new ImportIssue(s.SequenceNumber, "timetable.room_not_found", $"Room '{s.RoomCode}' not found."));
+                continue;
+            }
 
             if (!roomRes.Value.IsActive)
-                return Result<int>.Failure(new Error("timetable.room_inactive", $"Room '{s.RoomCode}' is inactive."));
+            {
+                issues.Add(new ImportIssue(s.SequenceNumber, "timetable.room_inactive", $"Room '{s.RoomCode}' is inactive."));
+                continue;
+            }
 
-            rows.Add(new ImportSlotRow(
+            validRows.Add(new ImportSlotRow(
                 GroupId: groupId,
                 ZoneId: roomRes.Value.ZoneId,
                 DayOfWeekIso: s.DayOfWeekIso,
@@ -80,6 +82,21 @@ public sealed class ImportIcsTimetableUseCase
             ));
         }
 
-        return await _store.ReplaceAllSlotsAsync(rows, ct);
+        var totalRows = parsed.Value.Rows.Count + parsed.Value.Issues.Count;
+
+        if (validRows.Count > 0)
+        {
+            var storeRes = await _store.ReplaceAllSlotsAsync(validRows, ct);
+            if (!storeRes.IsSuccess)
+                return Result<ImportReport>.Failure(storeRes.Error);
+        }
+
+        var report = new ImportReport(
+            TotalRows: totalRows,
+            ImportedRows: validRows.Count,
+            SkippedRows: issues.Count,
+            Issues: issues);
+
+        return Result<ImportReport>.Success(report);
     }
 }
