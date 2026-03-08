@@ -56,6 +56,7 @@ public static class TimetableModuleServiceCollectionExtensions
         services.AddScoped<ITimetablePreviewDiffService, EfTimetablePreviewDiffService>();
 
         services.AddScoped<PreviewCsvTimetableImportUseCase>();
+        services.AddScoped<PreviewIcsTimetableImportUseCase>();
         services.AddScoped<ApplyImportPreviewUseCase>();
 
         return services;

@@ -22,6 +22,7 @@ public sealed class TimetableController : ApiControllerBase
     private readonly ImportIcsTimetableUseCase _importIcs;
 
     private readonly PreviewCsvTimetableImportUseCase _previewCsv;
+    private readonly PreviewIcsTimetableImportUseCase _previewIcs;
     private readonly ApplyImportPreviewUseCase _applyPreview;
 
     public TimetableController(
@@ -30,6 +31,7 @@ public sealed class TimetableController : ApiControllerBase
         ImportCsvTimetableUseCase importCsv,
         ImportIcsTimetableUseCase importIcs,
         PreviewCsvTimetableImportUseCase previewCsv,
+        PreviewIcsTimetableImportUseCase previewIcs,
         ApplyImportPreviewUseCase applyPreview,
         IApiErrorMapper mapper) : base(mapper)
     {
@@ -38,6 +40,7 @@ public sealed class TimetableController : ApiControllerBase
         _importCsv = importCsv;
         _importIcs = importIcs;
         _previewCsv = previewCsv;
+        _previewIcs = previewIcs;
         _applyPreview = applyPreview;
     }
 
@@ -68,9 +71,11 @@ public sealed class TimetableController : ApiControllerBase
     [HttpPost("import/csv/preview")]
     [RequestSizeLimit(10_000_000)]
     public async Task<IActionResult> PreviewCsv(
-    [FromForm] IFormFile file,
+    [FromForm] ImportFileRequest req,
     CancellationToken ct)
     {
+        var file = req.File;
+
         if (file is null || file.Length == 0)
             return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
                 UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
@@ -125,6 +130,35 @@ public sealed class TimetableController : ApiControllerBase
             ct: ct);
 
         return ToActionResult(res);
+    }
+
+    [HttpPost("import/ics/preview")]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> PreviewIcs(
+    [FromQuery] Guid groupId,
+    [FromQuery] int rangeDays = 120,
+    [FromQuery] string timeZoneId = "Europe/Rome",
+    [FromForm] ImportFileRequest req = null!,
+    CancellationToken ct = default)
+    {
+        var file = req.File;
+
+        if (file is null || file.Length == 0)
+            return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
+
+        await using var stream = file.OpenReadStream();
+
+        var result = await _previewIcs.ExecuteAsync(
+            groupId: groupId,
+            fileStream: stream,
+            sourceFileName: file.FileName,
+            fromDate: DateOnly.FromDateTime(DateTime.UtcNow),
+            rangeDays: rangeDays,
+            timeZoneId: timeZoneId,
+            ct: ct);
+
+        return ToActionResult(result);
     }
 
     [HttpGet("batches")]
