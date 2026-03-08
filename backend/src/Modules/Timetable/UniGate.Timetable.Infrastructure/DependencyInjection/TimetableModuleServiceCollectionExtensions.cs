@@ -58,8 +58,10 @@ public static class TimetableModuleServiceCollectionExtensions
         services.AddScoped<TimetableImportWorkflow>();
         services.AddScoped<PreviewTimetableImportUseCase>();
 
-        services.AddScoped<CsvTimetableSourceParser>();
-        services.AddScoped<IcsTimetableSourceParser>();
+        services.AddScoped<ITimetableImportSourceParser, CsvTimetableSourceParser>();
+        services.AddScoped<ITimetableImportSourceParser, IcsTimetableSourceParser>();
+
+        services.AddScoped<ITimetableImportSourceParserResolver, TimetableImportSourceParserResolver>();
 
         services.AddScoped<ApplyImportPreviewUseCase>();
 

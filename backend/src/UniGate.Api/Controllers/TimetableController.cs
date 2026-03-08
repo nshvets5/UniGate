@@ -3,12 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using UniGate.Api.Controllers.Base;
 using UniGate.Api.Errors;
 using UniGate.Api.Extensions;
-using UniGate.Directory.Application.Rooms;
 using UniGate.SharedKernel.Results;
 using UniGate.Timetable.Application;
 using UniGate.Timetable.Application.Import;
-using UniGate.Timetable.Application.Import.Csv;
-using UniGate.Timetable.Application.Import.Ics;
 using UniGate.Timetable.Infrastructure.Import.Csv;
 using UniGate.Timetable.Infrastructure.Import.Ics;
 
@@ -23,8 +20,7 @@ public sealed class TimetableController : ApiControllerBase
     private readonly ImportTimetableUseCase _import;
 
     private readonly PreviewTimetableImportUseCase _preview;
-    private readonly CsvTimetableSourceParser _csvParser;
-    private readonly IcsTimetableSourceParser _icsParser;
+    private readonly ITimetableImportSourceParserResolver _parserResolver;
     private readonly ApplyImportPreviewUseCase _applyPreview;
 
     public TimetableController(
@@ -32,8 +28,7 @@ public sealed class TimetableController : ApiControllerBase
         SyncTimetableToAccessUseCase sync,
         ImportTimetableUseCase import,
         PreviewTimetableImportUseCase preview,
-        CsvTimetableSourceParser csvParser,
-        IcsTimetableSourceParser icsParser,
+        ITimetableImportSourceParserResolver parserResolver,
         ApplyImportPreviewUseCase applyPreview,
         IApiErrorMapper mapper) : base(mapper)
     {
@@ -41,8 +36,7 @@ public sealed class TimetableController : ApiControllerBase
         _sync = sync;
         _import = import;
         _preview = preview;
-        _csvParser = csvParser;
-        _icsParser = icsParser;
+        _parserResolver = parserResolver;
         _applyPreview = applyPreview;
     }
 
@@ -63,10 +57,14 @@ public sealed class TimetableController : ApiControllerBase
             return ToActionResult(Result.Failure(
                 UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
 
+        var parserRes = _parserResolver.Resolve("csv");
+        if (!parserRes.IsSuccess)
+            return ToActionResult(parserRes);
+
         await using var stream = file.OpenReadStream();
 
         var result = await _import.ExecuteAsync(
-            parser: _csvParser,
+            parser: parserRes.Value,
             request: new TimetableParseRequest(
                 FileStream: stream,
                 SourceFileName: file.FileName,
@@ -91,10 +89,14 @@ public sealed class TimetableController : ApiControllerBase
             return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
                 UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
 
+        var parserRes = _parserResolver.Resolve("csv");
+        if (!parserRes.IsSuccess)
+            return ToActionResult(parserRes);
+
         await using var stream = file.OpenReadStream();
 
         var result = await _preview.ExecuteAsync(
-            parser: _csvParser,
+            parser: parserRes.Value,
             request: new TimetableParseRequest(
                 FileStream: stream,
                 SourceFileName: file.FileName,
@@ -136,10 +138,14 @@ public sealed class TimetableController : ApiControllerBase
             return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
                 UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
 
+        var parserRes = _parserResolver.Resolve("ics");
+        if (!parserRes.IsSuccess)
+            return ToActionResult(parserRes);
+
         await using var stream = file.OpenReadStream();
 
         var result = await _import.ExecuteAsync(
-            parser: _icsParser,
+            parser: parserRes.Value,
             request: new TimetableParseRequest(
                 FileStream: stream,
                 SourceFileName: file.FileName,
@@ -167,10 +173,14 @@ public sealed class TimetableController : ApiControllerBase
             return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
                 UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
 
+        var parserRes = _parserResolver.Resolve("ics");
+        if (!parserRes.IsSuccess)
+            return ToActionResult(parserRes);
+
         await using var stream = file.OpenReadStream();
 
         var result = await _preview.ExecuteAsync(
-            parser: _icsParser,
+            parser: parserRes.Value,
             request: new TimetableParseRequest(
                 FileStream: stream,
                 SourceFileName: file.FileName,
