@@ -56,8 +56,12 @@ public static class TimetableModuleServiceCollectionExtensions
         services.AddScoped<IImportPreviewStore, DbImportPreviewStore>();
         services.AddScoped<ITimetablePreviewDiffService, EfTimetablePreviewDiffService>();
 
-        services.AddScoped<PreviewCsvTimetableImportUseCase>();
-        services.AddScoped<PreviewIcsTimetableImportUseCase>();
+        services.AddScoped<TimetableImportWorkflow>();
+        services.AddScoped<PreviewTimetableImportUseCase>();
+
+        services.AddScoped<CsvTimetableSourceParser>();
+        services.AddScoped<IcsTimetableSourceParser>();
+
         services.AddScoped<ApplyImportPreviewUseCase>();
 
         services.AddHostedService<PreviewCleanupHostedService>();

@@ -9,6 +9,8 @@ using UniGate.Timetable.Application;
 using UniGate.Timetable.Application.Import;
 using UniGate.Timetable.Application.Import.Csv;
 using UniGate.Timetable.Application.Import.Ics;
+using UniGate.Timetable.Infrastructure.Import.Csv;
+using UniGate.Timetable.Infrastructure.Import.Ics;
 
 namespace UniGate.Api.Controllers;
 
@@ -21,26 +23,29 @@ public sealed class TimetableController : ApiControllerBase
     private readonly ImportCsvTimetableUseCase _importCsv;
     private readonly ImportIcsTimetableUseCase _importIcs;
 
-    private readonly PreviewCsvTimetableImportUseCase _previewCsv;
-    private readonly PreviewIcsTimetableImportUseCase _previewIcs;
+    private readonly PreviewTimetableImportUseCase _preview;
+    private readonly CsvTimetableSourceParser _csvParser;
+    private readonly IcsTimetableSourceParser _icsParser;
     private readonly ApplyImportPreviewUseCase _applyPreview;
 
     public TimetableController(
         ITimetableStore store,
         SyncTimetableToAccessUseCase sync,
-        ImportCsvTimetableUseCase importCsv,
         ImportIcsTimetableUseCase importIcs,
-        PreviewCsvTimetableImportUseCase previewCsv,
-        PreviewIcsTimetableImportUseCase previewIcs,
+        ImportCsvTimetableUseCase importCsv,
+        PreviewTimetableImportUseCase preview,
+        CsvTimetableSourceParser csvParser,
+        IcsTimetableSourceParser icsParser,
         ApplyImportPreviewUseCase applyPreview,
         IApiErrorMapper mapper) : base(mapper)
     {
         _store = store;
         _sync = sync;
-        _importCsv = importCsv;
         _importIcs = importIcs;
-        _previewCsv = previewCsv;
-        _previewIcs = previewIcs;
+        _importCsv = importCsv;
+        _preview = preview;
+        _csvParser = csvParser;
+        _icsParser = icsParser;
         _applyPreview = applyPreview;
     }
 
@@ -82,9 +87,15 @@ public sealed class TimetableController : ApiControllerBase
 
         await using var stream = file.OpenReadStream();
 
-        var result = await _previewCsv.ExecuteAsync(
-            fileStream: stream,
-            sourceFileName: file.FileName,
+        var result = await _preview.ExecuteAsync(
+            parser: _csvParser,
+            request: new TimetableParseRequest(
+                FileStream: stream,
+                SourceFileName: file.FileName,
+                DefaultGroupId: null,
+                FromDate: null,
+                RangeDays: null,
+                TimeZoneId: null),
             ct: ct);
 
         return ToActionResult(result);
@@ -149,13 +160,15 @@ public sealed class TimetableController : ApiControllerBase
 
         await using var stream = file.OpenReadStream();
 
-        var result = await _previewIcs.ExecuteAsync(
-            groupId: groupId,
-            fileStream: stream,
-            sourceFileName: file.FileName,
-            fromDate: DateOnly.FromDateTime(DateTime.UtcNow),
-            rangeDays: rangeDays,
-            timeZoneId: timeZoneId,
+        var result = await _preview.ExecuteAsync(
+            parser: _icsParser,
+            request: new TimetableParseRequest(
+                FileStream: stream,
+                SourceFileName: file.FileName,
+                DefaultGroupId: groupId,
+                FromDate: DateOnly.FromDateTime(DateTime.UtcNow),
+                RangeDays: rangeDays,
+                TimeZoneId: timeZoneId),
             ct: ct);
 
         return ToActionResult(result);
