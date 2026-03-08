@@ -46,9 +46,8 @@ public static class TimetableModuleServiceCollectionExtensions
         services.AddSingleton<TimetableSyncStatusEvaluator>();
 
         services.AddScoped<IIcsTimetableParser, IcalNetIcsTimetableParser>();
-        services.AddScoped<ImportIcsTimetableUseCase>();
         services.AddScoped<ICsvTimetableParser, CsvTimetableParser>();
-        services.AddScoped<ImportCsvTimetableUseCase>();
+        services.AddScoped<ImportTimetableUseCase>();
 
         services.AddScoped<ITimetableBatchDiffQuery, EfTimetableBatchDiffQuery>();
         services.AddScoped<GetTimetableBatchDiffUseCase>();

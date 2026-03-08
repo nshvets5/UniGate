@@ -20,8 +20,7 @@ public sealed class TimetableController : ApiControllerBase
 {
     private readonly ITimetableStore _store;
     private readonly SyncTimetableToAccessUseCase _sync;
-    private readonly ImportCsvTimetableUseCase _importCsv;
-    private readonly ImportIcsTimetableUseCase _importIcs;
+    private readonly ImportTimetableUseCase _import;
 
     private readonly PreviewTimetableImportUseCase _preview;
     private readonly CsvTimetableSourceParser _csvParser;
@@ -31,8 +30,7 @@ public sealed class TimetableController : ApiControllerBase
     public TimetableController(
         ITimetableStore store,
         SyncTimetableToAccessUseCase sync,
-        ImportIcsTimetableUseCase importIcs,
-        ImportCsvTimetableUseCase importCsv,
+        ImportTimetableUseCase import,
         PreviewTimetableImportUseCase preview,
         CsvTimetableSourceParser csvParser,
         IcsTimetableSourceParser icsParser,
@@ -41,8 +39,7 @@ public sealed class TimetableController : ApiControllerBase
     {
         _store = store;
         _sync = sync;
-        _importIcs = importIcs;
-        _importCsv = importCsv;
+        _import = import;
         _preview = preview;
         _csvParser = csvParser;
         _icsParser = icsParser;
@@ -68,7 +65,16 @@ public sealed class TimetableController : ApiControllerBase
 
         await using var stream = file.OpenReadStream();
 
-        var result = await _importCsv.ExecuteAsync(stream, ct);
+        var result = await _import.ExecuteAsync(
+            parser: _csvParser,
+            request: new TimetableParseRequest(
+                FileStream: stream,
+                SourceFileName: file.FileName,
+                DefaultGroupId: null,
+                FromDate: null,
+                RangeDays: null,
+                TimeZoneId: null),
+            ct: ct);
 
         return ToActionResult(result);
     }
@@ -132,15 +138,18 @@ public sealed class TimetableController : ApiControllerBase
 
         await using var stream = file.OpenReadStream();
 
-        var res = await _importIcs.ExecuteAsync(
-            groupId: groupId,
-            fileStream: stream,
-            fromDate: DateOnly.FromDateTime(DateTime.UtcNow),
-            rangeDays: rangeDays,
-            timeZoneId: timeZoneId,
+        var result = await _import.ExecuteAsync(
+            parser: _icsParser,
+            request: new TimetableParseRequest(
+                FileStream: stream,
+                SourceFileName: file.FileName,
+                DefaultGroupId: groupId,
+                FromDate: DateOnly.FromDateTime(DateTime.UtcNow),
+                RangeDays: rangeDays,
+                TimeZoneId: timeZoneId),
             ct: ct);
 
-        return ToActionResult(res);
+        return ToActionResult(result);
     }
 
     [HttpPost("import/ics/preview")]

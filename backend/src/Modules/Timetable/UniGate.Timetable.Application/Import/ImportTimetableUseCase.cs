@@ -1,29 +1,22 @@
 using UniGate.SharedKernel.Auth;
 using UniGate.SharedKernel.Directory;
-using UniGate.SharedKernel.Files;
 using UniGate.SharedKernel.Results;
 
-namespace UniGate.Timetable.Application.Import.Ics;
+namespace UniGate.Timetable.Application.Import;
 
-public sealed class ImportIcsTimetableUseCase
+public sealed class ImportTimetableUseCase
 {
-    private readonly ITextFileReader _fileReader;
-    private readonly IIcsTimetableParser _parser;
     private readonly IRoomLookup _rooms;
     private readonly ITimetableStore _store;
     private readonly ICurrentUser _currentUser;
     private readonly IIdentityProvider _identityProvider;
 
-    public ImportIcsTimetableUseCase(
-        ITextFileReader fileReader,
-        IIcsTimetableParser parser,
+    public ImportTimetableUseCase(
         IRoomLookup rooms,
         ITimetableStore store,
         ICurrentUser currentUser,
         IIdentityProvider identityProvider)
     {
-        _fileReader = fileReader;
-        _parser = parser;
         _rooms = rooms;
         _store = store;
         _currentUser = currentUser;
@@ -31,38 +24,27 @@ public sealed class ImportIcsTimetableUseCase
     }
 
     public async Task<Result<ImportReport>> ExecuteAsync(
-        Guid groupId,
-        Stream fileStream,
-        DateOnly fromDate,
-        int rangeDays,
-        string timeZoneId,
+        ITimetableImportSourceParser parser,
+        TimetableParseRequest request,
         CancellationToken ct = default)
     {
-        if (groupId == Guid.Empty)
-            return Result<ImportReport>.Failure(Errors.Validation.Failed("groupId is required."));
+        var parsedRes = await parser.ParseAsync(request, ct);
+        if (!parsedRes.IsSuccess)
+            return Result<ImportReport>.Failure(parsedRes.Error);
 
-        if (fileStream is null)
-            return Result<ImportReport>.Failure(Errors.Validation.Failed("File stream is required."));
+        var parsed = parsedRes.Value;
 
-        if (rangeDays is < 7 or > 366)
-            return Result<ImportReport>.Failure(Errors.Validation.Failed("rangeDays must be between 7 and 366."));
-
-        if (string.IsNullOrWhiteSpace(timeZoneId))
-            return Result<ImportReport>.Failure(Errors.Validation.Failed("timeZoneId is required."));
-
-        var fileText = await _fileReader.ReadAllTextAsync(fileStream, ct);
-        if (!fileText.IsSuccess)
-            return Result<ImportReport>.Failure(fileText.Error);
-
-        var parsed = await _parser.ParseAsync(fileText.Value, fromDate, rangeDays, timeZoneId, ct);
-        if (!parsed.IsSuccess)
-            return Result<ImportReport>.Failure(parsed.Error);
-
-        var issues = parsed.Value.Issues.ToList();
+        var issues = parsed.Issues.ToList();
         var validRows = new List<ImportSlotRow>();
 
-        foreach (var s in parsed.Value.Rows)
+        foreach (var s in parsed.Rows)
         {
+            if (s.GroupId is null || s.GroupId == Guid.Empty)
+            {
+                issues.Add(new ImportIssue(s.SequenceNumber, "timetable.group_missing", "GroupId is missing."));
+                continue;
+            }
+
             var roomRes = await _rooms.FindByCodeAsync(s.RoomCode, ct);
 
             if (!roomRes.IsSuccess)
@@ -78,24 +60,23 @@ public sealed class ImportIcsTimetableUseCase
             }
 
             validRows.Add(new ImportSlotRow(
-                GroupId: groupId,
+                GroupId: s.GroupId.Value,
                 ZoneId: roomRes.Value.ZoneId,
                 DayOfWeekIso: s.DayOfWeekIso,
                 StartTime: s.StartTime,
                 EndTime: s.EndTime,
-                ValidFrom: null,
-                ValidTo: null,
-                Title: s.Title
-            ));
+                ValidFrom: s.ValidFrom,
+                ValidTo: s.ValidTo,
+                Title: s.Title));
         }
 
-        var totalRows = parsed.Value.Rows.Count + parsed.Value.Issues.Count;
+        var totalRows = parsed.Rows.Count + parsed.Issues.Count;
 
         if (validRows.Count > 0)
         {
-            var storeRes = await _store.ImportBatchAsync(
-                sourceType: "ics",
-                sourceFileName: "ics-upload",
+            var importRes = await _store.ImportBatchAsync(
+                sourceType: parsed.SourceType,
+                sourceFileName: request.SourceFileName,
                 importedByProvider: _identityProvider.Name,
                 importedBySubject: _currentUser.Subject,
                 rows: validRows,
@@ -103,8 +84,8 @@ public sealed class ImportIcsTimetableUseCase
                 skippedRows: issues.Count,
                 ct: ct);
 
-            if (!storeRes.IsSuccess)
-                return Result<ImportReport>.Failure(storeRes.Error);
+            if (!importRes.IsSuccess)
+                return Result<ImportReport>.Failure(importRes.Error);
         }
 
         var report = new ImportReport(
