@@ -3,8 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Timetable.Application;
 using UniGate.Timetable.Application.Diff;
+using UniGate.Timetable.Application.Import;
 using UniGate.Timetable.Application.Import.Csv;
 using UniGate.Timetable.Application.Import.Ics;
+using UniGate.Timetable.Infrastructure.Import;
 using UniGate.Timetable.Infrastructure.Import.Csv;
 using UniGate.Timetable.Infrastructure.Import.Ics;
 using UniGate.Timetable.Infrastructure.Persistence;
@@ -49,6 +51,12 @@ public static class TimetableModuleServiceCollectionExtensions
 
         services.AddScoped<ITimetableBatchDiffQuery, EfTimetableBatchDiffQuery>();
         services.AddScoped<GetTimetableBatchDiffUseCase>();
+
+        services.AddSingleton<IImportPreviewStore, InMemoryImportPreviewStore>();
+        services.AddScoped<ITimetablePreviewDiffService, EfTimetablePreviewDiffService>();
+
+        services.AddScoped<PreviewCsvTimetableImportUseCase>();
+        services.AddScoped<ApplyImportPreviewUseCase>();
 
         return services;
     }

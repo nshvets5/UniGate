@@ -6,6 +6,7 @@ using UniGate.Api.Extensions;
 using UniGate.Directory.Application.Rooms;
 using UniGate.SharedKernel.Results;
 using UniGate.Timetable.Application;
+using UniGate.Timetable.Application.Import;
 using UniGate.Timetable.Application.Import.Csv;
 using UniGate.Timetable.Application.Import.Ics;
 
@@ -20,17 +21,24 @@ public sealed class TimetableController : ApiControllerBase
     private readonly ImportCsvTimetableUseCase _importCsv;
     private readonly ImportIcsTimetableUseCase _importIcs;
 
+    private readonly PreviewCsvTimetableImportUseCase _previewCsv;
+    private readonly ApplyImportPreviewUseCase _applyPreview;
+
     public TimetableController(
         ITimetableStore store,
         SyncTimetableToAccessUseCase sync,
         ImportCsvTimetableUseCase importCsv,
         ImportIcsTimetableUseCase importIcs,
+        PreviewCsvTimetableImportUseCase previewCsv,
+        ApplyImportPreviewUseCase applyPreview,
         IApiErrorMapper mapper) : base(mapper)
     {
         _store = store;
         _sync = sync;
         _importCsv = importCsv;
         _importIcs = importIcs;
+        _previewCsv = previewCsv;
+        _applyPreview = applyPreview;
     }
 
     public sealed class ImportFileRequest
@@ -56,6 +64,33 @@ public sealed class TimetableController : ApiControllerBase
 
         return ToActionResult(result);
     }
+
+    [HttpPost("import/csv/preview")]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> PreviewCsv(
+    [FromForm] IFormFile file,
+    CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return ToActionResult(UniGate.SharedKernel.Results.Result.Failure(
+                UniGate.SharedKernel.Results.Errors.Validation.Failed("File is required.")));
+
+        await using var stream = file.OpenReadStream();
+
+        var result = await _previewCsv.ExecuteAsync(
+            fileStream: stream,
+            sourceFileName: file.FileName,
+            ct: ct);
+
+        return ToActionResult(result);
+    }
+
+    public sealed record ApplyPreviewRequest(string PreviewToken);
+
+    [HttpPost("import/apply")]
+    public async Task<IActionResult> ApplyPreview([FromBody] ApplyPreviewRequest req, CancellationToken ct)
+        => ToActionResult(await _applyPreview.ExecuteAsync(req.PreviewToken, ct));
+
     [HttpPost("sync-now")]
     public async Task<IActionResult> SyncNow(CancellationToken ct)
         => ToActionResult(await _sync.ExecuteAsync(ct));
