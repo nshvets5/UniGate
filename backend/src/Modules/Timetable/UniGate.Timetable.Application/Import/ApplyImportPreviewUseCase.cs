@@ -34,7 +34,9 @@ public sealed class ApplyImportPreviewUseCase
         if (!importRes.IsSuccess)
             return Result<Guid>.Failure(importRes.Error);
 
-        await _previewStore.DeleteAsync(previewToken, ct);
+        var appliedRes = await _previewStore.MarkAppliedAsync(previewToken, ct);
+        if (!appliedRes.IsSuccess)
+            return Result<Guid>.Failure(appliedRes.Error);
 
         return Result<Guid>.Success(importRes.Value);
     }

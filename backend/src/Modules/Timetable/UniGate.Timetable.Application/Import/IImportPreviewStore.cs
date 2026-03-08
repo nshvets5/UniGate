@@ -26,4 +26,6 @@ public interface IImportPreviewStore
     Task<Result> DeleteAsync(string token, CancellationToken ct = default);
 
     Task<PreviewStoreStats> GetStatsAsync(CancellationToken ct = default);
+
+    Task<Result> MarkAppliedAsync(string token, CancellationToken ct = default);
 }

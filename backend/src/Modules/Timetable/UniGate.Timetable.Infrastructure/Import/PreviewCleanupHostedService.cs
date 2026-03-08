@@ -1,21 +1,23 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using UniGate.Timetable.Application.Import;
+using UniGate.Timetable.Infrastructure.Persistence;
 
 namespace UniGate.Timetable.Infrastructure.Import;
 
 public sealed class PreviewCleanupHostedService : BackgroundService
 {
-    private readonly IImportPreviewStore _store;
+    private readonly IServiceProvider _sp;
     private readonly ILogger<PreviewCleanupHostedService> _logger;
 
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(10);
 
     public PreviewCleanupHostedService(
-        IImportPreviewStore store,
+        IServiceProvider sp,
         ILogger<PreviewCleanupHostedService> logger)
     {
-        _store = store;
+        _sp = sp;
         _logger = logger;
     }
 
@@ -29,12 +31,24 @@ public sealed class PreviewCleanupHostedService : BackgroundService
             {
                 await Task.Delay(Interval, stoppingToken);
 
-                var stats = await _store.GetStatsAsync(stoppingToken);
+                using var scope = _sp.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<TimetableDbContext>();
+
+                var now = DateTimeOffset.UtcNow;
+
+                var expired = await db.ImportPreviews
+                    .Where(x => x.ExpiresAt <= now || x.AppliedAt != null)
+                    .ToListAsync(stoppingToken);
+
+                if (expired.Count > 0)
+                {
+                    db.ImportPreviews.RemoveRange(expired);
+                    await db.SaveChangesAsync(stoppingToken);
+                }
 
                 _logger.LogInformation(
-                    "Preview store stats: total={Total} expired={Expired}",
-                    stats.TotalEntries,
-                    stats.ExpiredEntries);
+                    "Preview cleanup completed. Removed={Count}",
+                    expired.Count);
             }
             catch (OperationCanceledException)
             {

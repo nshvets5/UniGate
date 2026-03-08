@@ -9,6 +9,7 @@ public sealed class TimetableDbContext : DbContext
 
     public DbSet<TimetableSlot> Slots => Set<TimetableSlot>();
     public DbSet<TimetableImportBatch> ImportBatches => Set<TimetableImportBatch>();
+    public DbSet<TimetableImportPreview> ImportPreviews => Set<TimetableImportPreview>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +63,32 @@ public sealed class TimetableDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.BatchId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TimetableImportPreview>(b =>
+        {
+            b.ToTable("import_previews");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Token).HasMaxLength(64).IsRequired();
+            b.Property(x => x.SourceType).HasMaxLength(20).IsRequired();
+            b.Property(x => x.SourceFileName).HasMaxLength(255);
+
+            b.Property(x => x.ImportedByProvider).HasMaxLength(50);
+            b.Property(x => x.ImportedBySubject).HasMaxLength(200);
+
+            b.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
+
+            b.Property(x => x.TotalRows).IsRequired();
+            b.Property(x => x.SkippedRows).IsRequired();
+
+            b.Property(x => x.ExpiresAt).IsRequired();
+            b.Property(x => x.CreatedAt).IsRequired();
+            b.Property(x => x.AppliedAt);
+
+            b.HasIndex(x => x.Token).IsUnique();
+            b.HasIndex(x => x.ExpiresAt);
+            b.HasIndex(x => x.AppliedAt);
         });
     }
 }

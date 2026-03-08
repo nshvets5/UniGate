@@ -53,7 +53,7 @@ public static class TimetableModuleServiceCollectionExtensions
         services.AddScoped<ITimetableBatchDiffQuery, EfTimetableBatchDiffQuery>();
         services.AddScoped<GetTimetableBatchDiffUseCase>();
 
-        services.AddSingleton<IImportPreviewStore, InMemoryImportPreviewStore>();
+        services.AddScoped<IImportPreviewStore, DbImportPreviewStore>();
         services.AddScoped<ITimetablePreviewDiffService, EfTimetablePreviewDiffService>();
 
         services.AddScoped<PreviewCsvTimetableImportUseCase>();

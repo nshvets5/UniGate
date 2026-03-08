@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\UniGate.SharedKernel\UniGate.SharedKernel.csproj" />
     <ProjectReference Include="..\UniGate.Timetable.Domain\UniGate.Timetable.Domain.csproj" />
   </ItemGroup>
