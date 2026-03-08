@@ -6,6 +6,7 @@ using UniGate.Timetable.Application.Diff;
 using UniGate.Timetable.Application.Import;
 using UniGate.Timetable.Application.Import.Csv;
 using UniGate.Timetable.Application.Import.Ics;
+using UniGate.Timetable.Infrastructure.Health;
 using UniGate.Timetable.Infrastructure.Import;
 using UniGate.Timetable.Infrastructure.Import.Csv;
 using UniGate.Timetable.Infrastructure.Import.Ics;
@@ -58,6 +59,11 @@ public static class TimetableModuleServiceCollectionExtensions
         services.AddScoped<PreviewCsvTimetableImportUseCase>();
         services.AddScoped<PreviewIcsTimetableImportUseCase>();
         services.AddScoped<ApplyImportPreviewUseCase>();
+
+        services.AddHostedService<PreviewCleanupHostedService>();
+
+        services.AddHealthChecks()
+            .AddCheck<PreviewStoreHealthCheck>("timetable_preview_store", tags: new[] { "ready" });
 
         return services;
     }

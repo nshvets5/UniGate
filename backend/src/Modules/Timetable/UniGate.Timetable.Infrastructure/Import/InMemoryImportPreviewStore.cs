@@ -58,4 +58,22 @@ public sealed class InMemoryImportPreviewStore : IImportPreviewStore
                 _entries.TryRemove(pair.Key, out _);
         }
     }
+
+    public Task<PreviewStoreStats> GetStatsAsync(CancellationToken ct = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        var entries = _entries.Values.ToList();
+
+        var expired = entries.Count(e => now - e.CreatedAt > Ttl);
+
+        var oldest = entries.OrderBy(e => e.CreatedAt).FirstOrDefault()?.CreatedAt;
+        var newest = entries.OrderByDescending(e => e.CreatedAt).FirstOrDefault()?.CreatedAt;
+
+        return Task.FromResult(new PreviewStoreStats(
+            TotalEntries: entries.Count,
+            ExpiredEntries: expired,
+            OldestEntry: oldest,
+            NewestEntry: newest));
+    }
 }
