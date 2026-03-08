@@ -55,25 +55,82 @@ public sealed class EfTimetableBatchDiffQuery : ITimetableBatchDiffQuery
                     x.Title))
                 .ToListAsync(ct);
 
-            var comparer = new TimetableSlotSnapshotComparer();
+            var exactComparer = new ExactSlotComparer();
 
-            var oldSet = oldSlots.ToHashSet(comparer);
-            var newSet = newSlots.ToHashSet(comparer);
+            var oldByKey = oldSlots
+                .GroupBy(SemanticKey)
+                .ToDictionary(g => g.Key, g => g.OrderBy(ExactSortKey).ToList());
 
-            var added = newSet.Except(oldSet, comparer).OrderBy(SortKey).ToList();
-            var removed = oldSet.Except(newSet, comparer).OrderBy(SortKey).ToList();
-            var unchanged = newSet.Intersect(oldSet, comparer).OrderBy(SortKey).ToList();
+            var newByKey = newSlots
+                .GroupBy(SemanticKey)
+                .ToDictionary(g => g.Key, g => g.OrderBy(ExactSortKey).ToList());
+
+            var allKeys = oldByKey.Keys.Union(newByKey.Keys).OrderBy(x => x).ToList();
+
+            var added = new List<TimetableSlotSnapshotDto>();
+            var removed = new List<TimetableSlotSnapshotDto>();
+            var changed = new List<TimetableSlotChangedDto>();
+            var unchanged = new List<TimetableSlotSnapshotDto>();
+
+            foreach (var key in allKeys)
+            {
+                oldByKey.TryGetValue(key, out var oldGroup);
+                newByKey.TryGetValue(key, out var newGroup);
+
+                oldGroup ??= new List<TimetableSlotSnapshotDto>();
+                newGroup ??= new List<TimetableSlotSnapshotDto>();
+
+                var oldRemaining = new List<TimetableSlotSnapshotDto>(oldGroup);
+                var newRemaining = new List<TimetableSlotSnapshotDto>(newGroup);
+
+                for (var i = oldRemaining.Count - 1; i >= 0; i--)
+                {
+                    var oldItem = oldRemaining[i];
+                    var idx = newRemaining.FindIndex(n => exactComparer.Equals(oldItem, n));
+                    if (idx >= 0)
+                    {
+                        unchanged.Add(oldItem);
+                        oldRemaining.RemoveAt(i);
+                        newRemaining.RemoveAt(idx);
+                    }
+                }
+
+                var pairs = Math.Min(oldRemaining.Count, newRemaining.Count);
+                for (var i = 0; i < pairs; i++)
+                {
+                    changed.Add(new TimetableSlotChangedDto(
+                        SemanticKey: key,
+                        Old: oldRemaining[i],
+                        New: newRemaining[i]));
+                }
+
+                if (oldRemaining.Count > pairs)
+                    removed.AddRange(oldRemaining.Skip(pairs));
+
+                if (newRemaining.Count > pairs)
+                    added.AddRange(newRemaining.Skip(pairs));
+            }
+
+            added = added.OrderBy(ExactSortKey).ToList();
+            removed = removed.OrderBy(ExactSortKey).ToList();
+            changed = changed
+                .OrderBy(x => x.SemanticKey)
+                .ThenBy(x => ExactSortKey(x.New))
+                .ToList();
+            unchanged = unchanged.OrderBy(ExactSortKey).ToList();
 
             return Result<TimetableBatchDiffDto>.Success(
                 new TimetableBatchDiffDto(
-                    oldBatchId,
-                    newBatchId,
-                    added.Count,
-                    removed.Count,
-                    unchanged.Count,
-                    added,
-                    removed,
-                    unchanged));
+                    OldBatchId: oldBatchId,
+                    NewBatchId: newBatchId,
+                    AddedCount: added.Count,
+                    RemovedCount: removed.Count,
+                    ChangedCount: changed.Count,
+                    UnchangedCount: unchanged.Count,
+                    Added: added,
+                    Removed: removed,
+                    Changed: changed,
+                    Unchanged: unchanged));
         }
         catch (Exception ex)
         {
@@ -82,10 +139,15 @@ public sealed class EfTimetableBatchDiffQuery : ITimetableBatchDiffQuery
         }
     }
 
-    private static string SortKey(TimetableSlotSnapshotDto x)
-        => $"{x.GroupId:N}|{x.ZoneId:N}|{x.DayOfWeekIso}|{x.StartTime}|{x.EndTime}|{x.ValidFrom}|{x.ValidTo}|{x.Title}";
+    private static string SemanticKey(TimetableSlotSnapshotDto x)
+        => $"{x.GroupId:N}|{x.DayOfWeekIso}|{Norm(x.Title)}";
 
-    private sealed class TimetableSlotSnapshotComparer : IEqualityComparer<TimetableSlotSnapshotDto>
+    private static string ExactSortKey(TimetableSlotSnapshotDto x)
+        => $"{x.GroupId:N}|{x.ZoneId:N}|{x.DayOfWeekIso}|{x.StartTime}|{x.EndTime}|{x.ValidFrom}|{x.ValidTo}|{Norm(x.Title)}";
+
+    private static string Norm(string? s) => (s ?? string.Empty).Trim().ToLowerInvariant();
+
+    private sealed class ExactSlotComparer : IEqualityComparer<TimetableSlotSnapshotDto>
     {
         public bool Equals(TimetableSlotSnapshotDto? x, TimetableSlotSnapshotDto? y)
         {
@@ -99,7 +161,7 @@ public sealed class EfTimetableBatchDiffQuery : ITimetableBatchDiffQuery
                    && x.EndTime == y.EndTime
                    && x.ValidFrom == y.ValidFrom
                    && x.ValidTo == y.ValidTo
-                   && string.Equals(Norm(x.Title), Norm(y.Title), StringComparison.Ordinal);
+                   && Norm(x.Title) == Norm(y.Title);
         }
 
         public int GetHashCode(TimetableSlotSnapshotDto obj)
@@ -114,7 +176,5 @@ public sealed class EfTimetableBatchDiffQuery : ITimetableBatchDiffQuery
                 obj.ValidTo,
                 Norm(obj.Title));
         }
-
-        private static string Norm(string? s) => (s ?? string.Empty).Trim();
     }
 }
