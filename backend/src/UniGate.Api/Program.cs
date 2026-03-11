@@ -16,6 +16,8 @@ using UniGate.Directory.Infrastructure.DependencyInjection;
 using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Iam.Infrastructure.DependencyInjection;
 using UniGate.Iam.Infrastructure.Persistence;
+using UniGate.Notifications.Infrastructure.DependencyInjection;
+using UniGate.Notifications.Infrastructure.Persistence;
 using UniGate.SharedKernel.Auth;
 using UniGate.SharedKernel.Files;
 using UniGate.Timetable.Infrastructure.DependencyInjection;
@@ -54,6 +56,10 @@ builder.Services.AddHealthChecks()
         (name: "timetable_db",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
         tags: new[] { "ready" })
+    .AddDbContextCheck<NotificationsDbContext>
+        (name: "notifications_db",
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
+        tags: new[] { "ready" })
     .AddCheck<KeycloakDiscoveryHealthCheck>(
         name: "keycloak",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
@@ -80,6 +86,7 @@ builder.Services.AddAuditModule(builder.Configuration);
 builder.Services.AddDirectoryModule(builder.Configuration);
 builder.Services.AddAccessModule(builder.Configuration);
 builder.Services.AddTimetableModule(builder.Configuration);
+builder.Services.AddNotificationsModule(builder.Configuration);
 
 builder.Services.AddScoped<ICurrentProfileIdAccessor, CurrentProfileIdAccessor>();
 builder.Services.AddScoped<ITextFileReader, Utf8TextFileReader>();

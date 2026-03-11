@@ -24,6 +24,11 @@
     <Project Path="src/Modules/Iam/UniGate.Iam.Domain/UniGate.Iam.Domain.csproj" />
     <Project Path="src/Modules/Iam/UniGate.Iam.Infrastructure/UniGate.Iam.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Notifications/">
+    <Project Path="src/Modules/Notifications/UniGate.Notifications.Application/UniGate.Notifications.Application.csproj" Id="402c35b6-29dd-4e63-9f3c-1bd2913e7cc5" />
+    <Project Path="src/Modules/Notifications/UniGate.Notifications.Domain/UniGate.Notifications.Domain.csproj" Id="802c222e-454c-497c-b2a3-92b26962ac87" />
+    <Project Path="src/Modules/Notifications/UniGate.Notifications.Infrastructure/UniGate.Notifications.Infrastructure.csproj" Id="4513f478-f4f4-4284-b67f-978f76393dce" />
+  </Folder>
   <Folder Name="/src/Modules/Timetable/">
     <Project Path="src/Modules/Timetable/UniGate.Timetable.Application/UniGate.Timetable.Application.csproj" Id="7eaf204f-3541-4ec0-9c25-763647e6cb64" />
     <Project Path="src/Modules/Timetable/UniGate.Timetable.Domain/UniGate.Timetable.Domain.csproj" Id="b45d0a6e-d5c6-46cf-96bc-454b079ef225" />
