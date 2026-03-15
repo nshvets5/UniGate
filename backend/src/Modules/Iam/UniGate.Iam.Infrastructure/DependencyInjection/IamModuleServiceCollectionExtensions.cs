@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Iam.Application.Abstractions;
+using UniGate.Iam.Application.IdentityEmails;
 using UniGate.Iam.Application.UseCases.EnsureMyProfile;
 using UniGate.Iam.Application.UseCases.GetCurrentUser;
+using UniGate.Iam.Infrastructure.Keycloak;
 using UniGate.Iam.Infrastructure.Outbox;
 using UniGate.Iam.Infrastructure.Persistence;
 using UniGate.Iam.Infrastructure.Queries;
@@ -39,6 +41,10 @@ public static class IamModuleServiceCollectionExtensions
         services.AddScoped<IOutboxReader, EfOutboxReader>();
 
         services.AddScoped<IProfileLookup, EfProfileLookup>();
+
+        services.Configure<KeycloakAdminOptions>(configuration.GetSection("Keycloak:Admin"));
+        services.AddHttpClient<IKeycloakAdminClient, KeycloakAdminClient>();
+        services.AddScoped<IIdentityEmailActions, IdentityEmailActionsService>();
 
         return services;
     }

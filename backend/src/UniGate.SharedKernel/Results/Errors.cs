@@ -23,5 +23,8 @@ public static class Errors
 
         public static readonly Error DatabaseFailure =
             new("infra.database_failure", "Database operation failed.");
+
+        public static readonly Error ExternalServiceUnavailable =
+            new("infra.external_service_unavailable", "External service is unavailable or request failed.");
     }
 }
