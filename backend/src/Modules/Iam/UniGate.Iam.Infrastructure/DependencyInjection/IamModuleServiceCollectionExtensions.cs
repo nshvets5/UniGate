@@ -46,6 +46,9 @@ public static class IamModuleServiceCollectionExtensions
         services.AddHttpClient<IKeycloakAdminClient, KeycloakAdminClient>();
         services.AddScoped<IIdentityEmailActions, IdentityEmailActionsService>();
 
+        services.AddScoped<ResendMyVerificationEmailUseCase>();
+        services.AddScoped<SendMyPasswordResetEmailUseCase>();
+
         return services;
     }
 }

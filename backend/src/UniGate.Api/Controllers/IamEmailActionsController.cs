@@ -7,8 +7,8 @@ using UniGate.Iam.Application.Abstractions;
 
 namespace UniGate.Api.Controllers;
 
-[Route("api/iam/email")]
-[Authorize]
+[Route("api/admin/iam/email")]
+[Authorize(Policy = AccessAuthorizationExtensions.AccessAdmin)]
 public sealed class IamEmailActionsController : ApiControllerBase
 {
     private readonly IIdentityEmailActions _actions;
