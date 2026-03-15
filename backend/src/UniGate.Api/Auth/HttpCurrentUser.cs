@@ -3,7 +3,7 @@ using UniGate.SharedKernel.Auth;
 
 namespace UniGate.Api.Auth;
 
-public sealed class HttpCurrentUser : ICurrentUser
+public sealed class HttpCurrentUser : ICurrentUser, ICurrentUserEmailVerification
 {
     private readonly IHttpContextAccessor _accessor;
 
@@ -33,4 +33,13 @@ public sealed class HttpCurrentUser : ICurrentUser
                 .Select(c => c.Value)
                 .Distinct()
                 .ToList();
+
+    public bool EmailVerified
+    {
+        get
+        {
+            var value = _accessor.HttpContext?.User?.FindFirst("email_verified")?.Value;
+            return bool.TryParse(value, out var parsed) && parsed;
+        }
+    }
 }

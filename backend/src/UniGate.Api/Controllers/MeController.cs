@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using UniGate.Api.Controllers.Base;
 using UniGate.Api.Errors;
 using UniGate.Directory.Application.Me;
+using UniGate.Iam.Application.Me;
 using UniGate.Iam.Application.UseCases.EnsureMyProfile;
 using UniGate.Iam.Application.UseCases.GetCurrentUser;
 
@@ -14,17 +15,20 @@ public sealed class MeController : ApiControllerBase
     private readonly GetCurrentUserUseCase _getCurrentUser;
     private readonly EnsureMyProfileUseCase _ensureMyProfile;
     private readonly GetMyStudentUseCase _myStudent;
+    private readonly GetMySecurityUseCase _mySecurity;
 
     public MeController(
         GetCurrentUserUseCase getCurrentUser,
         EnsureMyProfileUseCase ensureMyProfile,
         GetMyStudentUseCase myStudent,
+        GetMySecurityUseCase mySecurity,
         IApiErrorMapper errorMapper)
         : base(errorMapper)
     {
         _getCurrentUser = getCurrentUser;
         _ensureMyProfile = ensureMyProfile;
         _myStudent = myStudent;
+        _mySecurity = mySecurity;
     }
 
     [HttpGet]
@@ -50,4 +54,9 @@ public sealed class MeController : ApiControllerBase
         var studentResult = await _myStudent.ExecuteAsync(new GetMyStudentQuery(profileId), ct);
         return ToActionResult(studentResult);
     }
+
+    [HttpGet("security")]
+    [Authorize]
+    public async Task<IActionResult> GetSecurity(CancellationToken ct)
+    => ToActionResult(await _mySecurity.ExecuteAsync(ct));
 }

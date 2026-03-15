@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Iam.Application.Abstractions;
 using UniGate.Iam.Application.IdentityEmails;
+using UniGate.Iam.Application.Me;
 using UniGate.Iam.Application.UseCases.EnsureMyProfile;
 using UniGate.Iam.Application.UseCases.GetCurrentUser;
 using UniGate.Iam.Infrastructure.Keycloak;
@@ -48,6 +49,7 @@ public static class IamModuleServiceCollectionExtensions
 
         services.AddScoped<ResendMyVerificationEmailUseCase>();
         services.AddScoped<SendMyPasswordResetEmailUseCase>();
+        services.AddScoped<GetMySecurityUseCase>();
 
         return services;
     }
