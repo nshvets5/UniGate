@@ -1,9 +1,11 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using UniGate.Audit.Infrastructure.Persistence;
 using UniGate.Directory.Infrastructure.Persistence;
 using UniGate.Iam.Infrastructure.Outbox;
+using UniGate.Notifications.Application;
 using UniGate.SharedKernel.Auth;
+using UniGate.SharedKernel.Integration;
 using UniGate.SharedKernel.Outbox;
 
 
@@ -33,6 +35,13 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                 var directoryDb = scope.ServiceProvider.GetRequiredService<DirectoryDbContext>();
                 var profileLookup = scope.ServiceProvider.GetRequiredService<IProfileLookup>();
 
+                var timetableNotifier = scope.ServiceProvider
+                    .GetRequiredService<SendTimetableImportSummaryUseCase>();
+                var suspiciousAccessNotifier = scope.ServiceProvider
+                    .GetRequiredService<SendSuspiciousAccessAlertUseCase>();
+                var healthAlertNotifier = scope.ServiceProvider
+                    .GetRequiredService<SendHealthAlertUseCase>();
+
                 var batch = await reader.DequeueBatchAsync(batchSize: 20, ct);
 
                 if (batch.Count == 0)
@@ -47,7 +56,15 @@ public sealed class OutboxProcessorHostedService : BackgroundService
 
                     try
                     {
-                        await ProcessMessageAsync(msg, auditDb, directoryDb, profileLookup, ct);
+                        await ProcessMessageAsync(
+                            msg,
+                            auditDb,
+                            directoryDb,
+                            profileLookup,
+                            timetableNotifier,
+                            suspiciousAccessNotifier,
+                            healthAlertNotifier,
+                            ct);
                         await reader.MarkProcessedAsync(msg.Id, ct);
                     }
                     catch (Exception ex)
@@ -82,6 +99,9 @@ public sealed class OutboxProcessorHostedService : BackgroundService
         AuditDbContext auditDb,
         DirectoryDbContext directoryDb,
         IProfileLookup profileLookup,
+        SendTimetableImportSummaryUseCase timetableNotifier,
+        SendSuspiciousAccessAlertUseCase suspiciousAccessNotifier,
+        SendHealthAlertUseCase healthAlertNotifier,
         CancellationToken ct)
     {
         if (msg.Type == "iam.user_profile_provisioned")
@@ -279,6 +299,36 @@ public sealed class OutboxProcessorHostedService : BackgroundService
             ));
 
             await auditDb.SaveChangesAsync(ct);
+            return;
+        }
+
+        if (msg.Type == TimetableOutboxTypes.ImportCompleted)
+        {
+            var payload = JsonSerializer.Deserialize<TimetableImportCompletedPayload>(msg.PayloadJson);
+            if (payload is null)
+                throw new InvalidOperationException("Invalid timetable import completed payload.");
+
+            await timetableNotifier.ExecuteAsync(payload, ct);
+            return;
+        }
+
+        if (msg.Type == TimetableOutboxTypes.SuspiciousAccessDetected)
+        {
+            var payload = JsonSerializer.Deserialize<SuspiciousAccessDetectedPayload>(msg.PayloadJson);
+            if (payload is null)
+                throw new InvalidOperationException("Invalid suspicious access payload.");
+
+            await suspiciousAccessNotifier.ExecuteAsync(payload, ct);
+            return;
+        }
+
+        if (msg.Type == TimetableOutboxTypes.HealthAlertRaised)
+        {
+            var payload = JsonSerializer.Deserialize<HealthAlertRaisedPayload>(msg.PayloadJson);
+            if (payload is null)
+                throw new InvalidOperationException("Invalid health alert payload.");
+
+            await healthAlertNotifier.ExecuteAsync(payload, ct);
             return;
         }
 

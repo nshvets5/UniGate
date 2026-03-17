@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using UniGate.SharedKernel.Outbox;
 using UniGate.Timetable.Domain;
 
 namespace UniGate.Timetable.Infrastructure.Persistence;
@@ -10,6 +11,7 @@ public sealed class TimetableDbContext : DbContext
     public DbSet<TimetableSlot> Slots => Set<TimetableSlot>();
     public DbSet<TimetableImportBatch> ImportBatches => Set<TimetableImportBatch>();
     public DbSet<TimetableImportPreview> ImportPreviews => Set<TimetableImportPreview>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -89,6 +91,25 @@ public sealed class TimetableDbContext : DbContext
             b.HasIndex(x => x.Token).IsUnique();
             b.HasIndex(x => x.ExpiresAt);
             b.HasIndex(x => x.AppliedAt);
+        });
+
+        modelBuilder.Entity<OutboxMessage>(b =>
+        {
+            b.ToTable("messages", "outbox", tb => tb.ExcludeFromMigrations());
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Id);
+            b.Property(x => x.OccurredAt).IsRequired();
+            b.Property(x => x.Type).HasMaxLength(200).IsRequired();
+            b.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
+            b.Property(x => x.CorrelationId).HasMaxLength(64);
+            b.Property(x => x.TraceId).HasMaxLength(128);
+            b.Property(x => x.Attempts).IsRequired();
+            b.Property(x => x.LastError).HasMaxLength(2000);
+            b.Property(x => x.AvailableAt).IsRequired();
+            b.Property(x => x.ProcessedAt);
+            b.Property(x => x.DeadLetteredAt);
+            b.Property(x => x.DeadLetterReason).HasMaxLength(2000);
         });
     }
 }

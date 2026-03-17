@@ -6,6 +6,7 @@ using UniGate.Notifications.Infrastructure.Dispatching;
 using UniGate.Notifications.Infrastructure.Persistence;
 using UniGate.Notifications.Infrastructure.Smtp;
 using UniGate.Notifications.Infrastructure.Stores;
+using UniGate.SharedKernel.Notifications;
 
 namespace UniGate.Notifications.Infrastructure.DependencyInjection;
 
@@ -35,6 +36,12 @@ public static class NotificationsModuleServiceCollectionExtensions
         services.AddScoped<SendTestEmailUseCase>();
 
         services.AddHostedService<NotificationDispatcherHostedService>();
+
+        services.Configure<AdminNotificationOptions>(configuration.GetSection("Notifications:Admin"));
+        services.AddScoped<SystemNotificationsService>();
+        services.AddScoped<SendTimetableImportSummaryUseCase>();
+        services.AddScoped<SendSuspiciousAccessAlertUseCase>();
+        services.AddScoped<SendHealthAlertUseCase>();
 
         return services;
     }

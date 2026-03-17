@@ -1,5 +1,8 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using UniGate.SharedKernel.Integration;
+using UniGate.SharedKernel.Outbox;
 using UniGate.SharedKernel.Results;
 using UniGate.Timetable.Application;
 using UniGate.Timetable.Domain;
@@ -39,7 +42,10 @@ public sealed class EfTimetableStore : ITimetableStore
                 rows.Count,
                 skippedRows);
 
-            var activeBatches = await _db.ImportBatches.Where(x => x.IsActive).ToListAsync(ct);
+            var activeBatches = await _db.ImportBatches
+                .Where(x => x.IsActive)
+                .ToListAsync(ct);
+
             foreach (var b in activeBatches)
                 b.Deactivate();
 
@@ -59,6 +65,23 @@ public sealed class EfTimetableStore : ITimetableStore
                     r.ValidTo,
                     r.Title));
             }
+
+            var payload = new TimetableImportCompletedPayload(
+                BatchId: batch.Id,
+                SourceType: batch.SourceType,
+                SourceFileName: batch.SourceFileName,
+                ImportedByProvider: batch.ImportedByProvider,
+                ImportedBySubject: batch.ImportedBySubject,
+                TotalRows: batch.TotalRows,
+                ImportedRows: batch.ImportedRows,
+                SkippedRows: batch.SkippedRows,
+                OccurredAt: DateTimeOffset.UtcNow);
+
+            _db.OutboxMessages.Add(new OutboxMessage(
+                type: TimetableOutboxTypes.ImportCompleted,
+                payloadJson: JsonSerializer.Serialize(payload),
+                correlationId: null,
+                traceId: null));
 
             await _db.SaveChangesAsync(ct);
             return Result<Guid>.Success(batch.Id);
@@ -88,8 +111,14 @@ public sealed class EfTimetableStore : ITimetableStore
                 .OrderByDescending(x => x.CreatedAt)
                 .Take(take)
                 .Select(x => new ImportSlotRow(
-                    x.GroupId, x.ZoneId, x.DayOfWeekIso,
-                    x.StartTime, x.EndTime, x.ValidFrom, x.ValidTo, x.Title))
+                    x.GroupId,
+                    x.ZoneId,
+                    x.DayOfWeekIso,
+                    x.StartTime,
+                    x.EndTime,
+                    x.ValidFrom,
+                    x.ValidTo,
+                    x.Title))
                 .ToListAsync(ct);
 
             return Result<IReadOnlyList<ImportSlotRow>>.Success(items);
@@ -138,7 +167,10 @@ public sealed class EfTimetableStore : ITimetableStore
             if (target is null)
                 return Result.Failure(new Error("timetable.batch_not_found", "Import batch not found."));
 
-            var activeBatches = await _db.ImportBatches.Where(x => x.IsActive).ToListAsync(ct);
+            var activeBatches = await _db.ImportBatches
+                .Where(x => x.IsActive)
+                .ToListAsync(ct);
+
             foreach (var b in activeBatches)
                 b.Deactivate();
 
