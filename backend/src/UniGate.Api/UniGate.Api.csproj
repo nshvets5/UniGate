@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Modules\Access\UniGate.Access.Infrastructure\UniGate.Access.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Audit\UniGate.Audit.Infrastructure\UniGate.Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Devices\UniGate.Devices.Infrastructure\UniGate.Devices.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Directory\UniGate.Directory.Infrastructure\UniGate.Directory.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Iam\UniGate.Iam.Infrastructure\UniGate.Iam.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Notifications\UniGate.Notifications.Infrastructure\UniGate.Notifications.Infrastructure.csproj" />

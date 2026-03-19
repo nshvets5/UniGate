@@ -14,6 +14,11 @@
     <Project Path="src/Modules/Audit/UniGate.Audit.Domain/UniGate.Audit.Domain.csproj" Id="91463e29-47d1-4b81-976b-7908fb3297d9" />
     <Project Path="src/Modules/Audit/UniGate.Audit.Infrastructure/UniGate.Audit.Infrastructure.csproj" Id="35af0c5a-f6ba-4f46-99f5-24d31fc0717c" />
   </Folder>
+  <Folder Name="/src/Modules/Devices/">
+    <Project Path="src/Modules/Devices/UniGate.Devices.Application/UniGate.Devices.Application.csproj" Id="103c59eb-94b7-49d8-adc9-b4141973026a" />
+    <Project Path="src/Modules/Devices/UniGate.Devices.Domain/UniGate.Devices.Domain.csproj" Id="98839621-d68c-4663-b3f4-02d310c26744" />
+    <Project Path="src/Modules/Devices/UniGate.Devices.Infrastructure/UniGate.Devices.Infrastructure.csproj" Id="6d33aa73-a740-4ac7-a3a7-331ccc7dcf0e" />
+  </Folder>
   <Folder Name="/src/Modules/Directory/">
     <Project Path="src/Modules/Directory/UniGate.Directory.Application/UniGate.Directory.Application.csproj" Id="375334b6-0ed3-45a6-bb20-e9c158e0a991" />
     <Project Path="src/Modules/Directory/UniGate.Directory.Domain/UniGate.Directory.Domain.csproj" Id="4e182741-12f6-4fca-8720-39cf3645a33d" />
