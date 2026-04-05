@@ -11,16 +11,16 @@ public sealed class CreateReaderDeviceUseCase
         _store = store;
     }
 
-    public Task<Result<Guid>> ExecuteAsync(CreateReaderDeviceCommand cmd, CancellationToken ct = default)
+    public Task<Result<ReaderDeviceCreatedDto>> ExecuteAsync(CreateReaderDeviceCommand cmd, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(cmd.Code))
-            return Task.FromResult(Result<Guid>.Failure(Errors.Validation.Failed("Code is required.")));
+            return Task.FromResult(Result<ReaderDeviceCreatedDto>.Failure(Errors.Validation.Failed("Code is required.")));
 
         if (string.IsNullOrWhiteSpace(cmd.Name))
-            return Task.FromResult(Result<Guid>.Failure(Errors.Validation.Failed("Name is required.")));
+            return Task.FromResult(Result<ReaderDeviceCreatedDto>.Failure(Errors.Validation.Failed("Name is required.")));
 
         if (cmd.DoorId == Guid.Empty)
-            return Task.FromResult(Result<Guid>.Failure(Errors.Validation.Failed("DoorId is required.")));
+            return Task.FromResult(Result<ReaderDeviceCreatedDto>.Failure(Errors.Validation.Failed("DoorId is required.")));
 
         return _store.CreateAsync(cmd, ct);
     }

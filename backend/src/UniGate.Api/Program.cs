@@ -84,6 +84,7 @@ builder.Services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddScoped<UniGate.SharedKernel.Observability.IRequestContext, UniGate.Api.Observability.HttpRequestContext>();
+builder.Services.AddScoped<ICurrentDevice, CurrentDevice>();
 
 builder.Services.AddSingleton<IIdentityProvider, ConfigIdentityProvider>();
 
@@ -113,6 +114,7 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<RequestLoggingScopeMiddleware>();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<DeviceAuthMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

@@ -19,7 +19,7 @@ public sealed class EfReaderDevicesStore : IReaderDevicesStore
         _logger = logger;
     }
 
-    public async Task<Result<Guid>> CreateAsync(CreateReaderDeviceCommand cmd, CancellationToken ct = default)
+    public async Task<Result<ReaderDeviceCreatedDto>> CreateAsync(CreateReaderDeviceCommand cmd, CancellationToken ct = default)
     {
         try
         {
@@ -29,19 +29,27 @@ public sealed class EfReaderDevicesStore : IReaderDevicesStore
                 .AnyAsync(x => x.Code == code, ct);
 
             if (exists)
-                return Result<Guid>.Failure(new Error("devices.reader.duplicate_code", "Reader code already exists."));
+                return Result<ReaderDeviceCreatedDto>.Failure(new Error("devices.reader.duplicate_code", "Reader code already exists."));
 
             var reader = new ReaderDevice(code, cmd.Name.Trim(), cmd.DoorId, cmd.Type);
+            var apiKey = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+
+            var hash = Convert.ToBase64String(
+                System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Encoding.UTF8.GetBytes(apiKey)));
+
+            reader.SetApiKeyHash(hash);
 
             _db.ReaderDevices.Add(reader);
             await _db.SaveChangesAsync(ct);
 
-            return Result<Guid>.Success(reader.Id);
+            return Result<ReaderDeviceCreatedDto>.Success(
+                new ReaderDeviceCreatedDto(reader.Id, apiKey));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Create reader device failed");
-            return Result<Guid>.Failure(Errors.Infrastructure.DatabaseFailure);
+            return Result<ReaderDeviceCreatedDto>.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }
 

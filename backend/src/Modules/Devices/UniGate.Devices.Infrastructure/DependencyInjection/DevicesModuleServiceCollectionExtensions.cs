@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using UniGate.Devices.Application.Auth;
 using UniGate.Devices.Application.Readers;
 using UniGate.Devices.Application.Scan;
+using UniGate.Devices.Infrastructure.Auth;
 using UniGate.Devices.Infrastructure.Persistence;
 using UniGate.Devices.Infrastructure.Scan;
 using UniGate.Devices.Infrastructure.Stores;
@@ -39,6 +41,8 @@ public static class DevicesModuleServiceCollectionExtensions
         services.AddScoped<IAccessDecisionGateway, AccessDecisionGateway>();
 
         services.AddScoped<ReaderScanUseCase>();
+
+        services.AddScoped<IReaderAuthStore, EfReaderAuthStore>();
 
         return services;
     }

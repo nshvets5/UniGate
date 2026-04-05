@@ -5,7 +5,7 @@ namespace UniGate.Devices.Application.Readers;
 
 public interface IReaderDevicesStore
 {
-    Task<Result<Guid>> CreateAsync(CreateReaderDeviceCommand cmd, CancellationToken ct = default);
+    Task<Result<ReaderDeviceCreatedDto>> CreateAsync(CreateReaderDeviceCommand cmd, CancellationToken ct = default);
 
     Task<Result<PagedResult<ReaderDeviceDto>>> ListAsync(string? search, int page, int pageSize, CancellationToken ct = default);
 
