@@ -9,6 +9,7 @@ using UniGate.Access.Application.Admin.UseCases.Zones;
 using UniGate.Access.Application.Decision;
 using UniGate.Access.Infrastructure.Admin;
 using UniGate.Access.Infrastructure.Decision;
+using UniGate.Access.Infrastructure.Integration;
 using UniGate.Access.Infrastructure.Persistence;
 using UniGate.Access.Infrastructure.Scheduling;
 using UniGate.SharedKernel.Access;
@@ -56,6 +57,7 @@ public static class AccessModuleServiceCollectionExtensions
         services.AddScoped<SetRuleActiveUseCase>();
 
         services.AddScoped<IAccessRuleScheduler, EfAccessRuleScheduler>();
+        services.AddScoped<IStudentDoorAccessChecker, StudentDoorAccessChecker>();
 
         return services;
     }

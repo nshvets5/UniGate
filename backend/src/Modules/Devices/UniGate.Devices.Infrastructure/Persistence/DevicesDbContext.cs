@@ -8,6 +8,7 @@ public sealed class DevicesDbContext : DbContext
     public DevicesDbContext(DbContextOptions<DevicesDbContext> options) : base(options) { }
 
     public DbSet<ReaderDevice> ReaderDevices => Set<ReaderDevice>();
+    public DbSet<ReaderScanAttempt> ReaderScanAttempts => Set<ReaderScanAttempt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,6 +30,24 @@ public sealed class DevicesDbContext : DbContext
 
             b.HasIndex(x => x.Code).IsUnique();
             b.HasIndex(x => x.DoorId);
+        });
+
+        modelBuilder.Entity<ReaderScanAttempt>(b =>
+        {
+            b.ToTable("reader_scan_attempts");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.ReaderId).IsRequired();
+            b.Property(x => x.CredentialType).HasMaxLength(30).IsRequired();
+            b.Property(x => x.CredentialValue).HasMaxLength(300).IsRequired();
+            b.Property(x => x.CredentialId);
+            b.Property(x => x.StudentId);
+            b.Property(x => x.IsAllowed).IsRequired();
+            b.Property(x => x.ReasonCode).HasMaxLength(100).IsRequired();
+            b.Property(x => x.OccurredAt).IsRequired();
+
+            b.HasIndex(x => x.ReaderId);
+            b.HasIndex(x => x.OccurredAt);
         });
     }
 }

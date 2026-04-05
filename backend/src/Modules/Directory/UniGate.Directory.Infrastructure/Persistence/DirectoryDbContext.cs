@@ -11,6 +11,7 @@ public sealed class DirectoryDbContext : DbContext
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<Student> Students => Set<Student>();
     public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<StudentCredential> StudentCredentials => Set<StudentCredential>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -73,6 +74,21 @@ public sealed class DirectoryDbContext : DbContext
 
             b.HasIndex(x => x.Code).IsUnique();
             b.HasIndex(x => x.ZoneId);
+        });
+
+        modelBuilder.Entity<StudentCredential>(b =>
+        {
+            b.ToTable("student_credentials");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.StudentId).IsRequired();
+            b.Property(x => x.Type).HasMaxLength(30).IsRequired();
+            b.Property(x => x.Value).HasMaxLength(300).IsRequired();
+            b.Property(x => x.IsActive).IsRequired();
+            b.Property(x => x.CreatedAt).IsRequired();
+
+            b.HasIndex(x => new { x.Type, x.Value }).IsUnique();
+            b.HasIndex(x => x.StudentId);
         });
 
         modelBuilder.Entity<OutboxMessage>(b =>
