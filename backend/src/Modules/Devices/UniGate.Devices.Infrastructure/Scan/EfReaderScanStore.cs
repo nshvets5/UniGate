@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using UniGate.Devices.Application.Scan;
 using UniGate.Devices.Domain;
 using UniGate.Devices.Infrastructure.Persistence;
+using UniGate.SharedKernel.Integration;
+using UniGate.SharedKernel.Outbox;
 using UniGate.SharedKernel.Results;
 
 namespace UniGate.Devices.Infrastructure.Scan;
@@ -80,6 +83,36 @@ public sealed class EfReaderScanStore : IReaderScanStore
         catch (Exception ex)
         {
             _logger.LogError(ex, "TouchReaderAsync failed");
+            return Result.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+    }
+
+    public async Task<Result> EmitSuspiciousAccessAlertAsync(ReaderSuspiciousAccessAlertEntry entry, CancellationToken ct = default)
+    {
+        try
+        {
+            var payload = new SuspiciousAccessDetectedPayload(
+                AlertCode: entry.AlertCode,
+                Description: entry.Description,
+                CredentialValue: $"{entry.CredentialType}:{entry.CredentialValue}",
+                ReaderId: entry.ReaderId,
+                DoorId: entry.DoorId,
+                StudentId: entry.StudentId,
+                Attempts: entry.Attempts,
+                OccurredAt: DateTimeOffset.UtcNow);
+
+            _db.OutboxMessages.Add(new OutboxMessage(
+                type: TimetableOutboxTypes.SuspiciousAccessDetected,
+                payloadJson: JsonSerializer.Serialize(payload),
+                correlationId: null,
+                traceId: null));
+
+            await _db.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "EmitSuspiciousAccessAlertAsync failed");
             return Result.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }

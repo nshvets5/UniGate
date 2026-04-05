@@ -9,6 +9,8 @@ public interface IReaderScanStore
     Task<Result> LogAttemptAsync(ReaderScanLogEntry entry, CancellationToken ct = default);
 
     Task<Result> TouchReaderAsync(Guid readerId, CancellationToken ct = default);
+
+    Task<Result> EmitSuspiciousAccessAlertAsync(ReaderSuspiciousAccessAlertEntry entry, CancellationToken ct = default);
 }
 
 public sealed record ReaderDoorDto(
@@ -24,3 +26,13 @@ public sealed record ReaderScanLogEntry(
     Guid? StudentId,
     bool IsAllowed,
     string ReasonCode);
+
+public sealed record ReaderSuspiciousAccessAlertEntry(
+    string AlertCode,
+    string Description,
+    string CredentialType,
+    string CredentialValue,
+    Guid? ReaderId,
+    Guid? DoorId,
+    Guid? StudentId,
+    int Attempts);

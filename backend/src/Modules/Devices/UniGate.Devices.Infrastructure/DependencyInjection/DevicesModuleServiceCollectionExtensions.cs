@@ -43,6 +43,7 @@ public static class DevicesModuleServiceCollectionExtensions
         services.AddScoped<ReaderScanUseCase>();
 
         services.AddScoped<IReaderAuthStore, EfReaderAuthStore>();
+        services.AddScoped<ISuspiciousAccessDetector, EfSuspiciousAccessDetector>();
 
         return services;
     }

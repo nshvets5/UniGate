@@ -7,15 +7,18 @@ public sealed class ReaderScanUseCase
     private readonly IReaderScanStore _store;
     private readonly ICredentialResolver _resolver;
     private readonly IAccessDecisionGateway _access;
+    private readonly ISuspiciousAccessDetector _detector;
 
     public ReaderScanUseCase(
         IReaderScanStore store,
         ICredentialResolver resolver,
-        IAccessDecisionGateway access)
+        IAccessDecisionGateway access,
+        ISuspiciousAccessDetector detector)
     {
         _store = store;
         _resolver = resolver;
         _access = access;
+        _detector = detector;
     }
 
     public async Task<Result<ReaderScanResultDto>> ExecuteAsync(ReaderScanCommand cmd, CancellationToken ct = default)
@@ -46,6 +49,14 @@ public sealed class ReaderScanUseCase
                 false,
                 "READER_INACTIVE"), ct);
 
+            await TryRaiseSuspiciousAlertAsync(
+                cmd.ReaderId,
+                reader.DoorId,
+                null,
+                cmd.CredentialType,
+                cmd.CredentialValue,
+                ct);
+
             return Result<ReaderScanResultDto>.Success(new ReaderScanResultDto(
                 false,
                 "READER_INACTIVE",
@@ -66,6 +77,14 @@ public sealed class ReaderScanUseCase
                 null,
                 false,
                 "CREDENTIAL_NOT_FOUND"), ct);
+
+            await TryRaiseSuspiciousAlertAsync(
+                cmd.ReaderId,
+                reader.DoorId,
+                null,
+                cmd.CredentialType,
+                cmd.CredentialValue,
+                ct);
 
             await _store.TouchReaderAsync(cmd.ReaderId, ct);
 
@@ -91,6 +110,14 @@ public sealed class ReaderScanUseCase
                 false,
                 "CREDENTIAL_INACTIVE"), ct);
 
+            await TryRaiseSuspiciousAlertAsync(
+                cmd.ReaderId,
+                reader.DoorId,
+                credential.StudentId,
+                cmd.CredentialType,
+                cmd.CredentialValue,
+                ct);
+
             await _store.TouchReaderAsync(cmd.ReaderId, ct);
 
             return Result<ReaderScanResultDto>.Success(new ReaderScanResultDto(
@@ -112,6 +139,14 @@ public sealed class ReaderScanUseCase
                 credential.StudentId,
                 false,
                 "STUDENT_INACTIVE"), ct);
+
+            await TryRaiseSuspiciousAlertAsync(
+                cmd.ReaderId,
+                reader.DoorId,
+                credential.StudentId,
+                cmd.CredentialType,
+                cmd.CredentialValue,
+                ct);
 
             await _store.TouchReaderAsync(cmd.ReaderId, ct);
 
@@ -140,6 +175,17 @@ public sealed class ReaderScanUseCase
             allowed,
             reason), ct);
 
+        if (!allowed)
+        {
+            await TryRaiseSuspiciousAlertAsync(
+                cmd.ReaderId,
+                reader.DoorId,
+                credential.StudentId,
+                cmd.CredentialType,
+                cmd.CredentialValue,
+                ct);
+        }
+
         await _store.TouchReaderAsync(cmd.ReaderId, ct);
 
         return Result<ReaderScanResultDto>.Success(new ReaderScanResultDto(
@@ -149,5 +195,28 @@ public sealed class ReaderScanUseCase
             reader.DoorId,
             credential.StudentId,
             credential.CredentialId));
+    }
+
+    private async Task TryRaiseSuspiciousAlertAsync(
+    Guid readerId,
+    Guid doorId,
+    Guid? studentId,
+    string credentialType,
+    string credentialValue,
+    CancellationToken ct)
+    {
+        var suspiciousRes = await _detector.CheckAsync(credentialType, credentialValue, ct);
+        if (!suspiciousRes.IsSuccess || !suspiciousRes.Value.IsSuspicious)
+            return;
+
+        await _store.EmitSuspiciousAccessAlertAsync(new ReaderSuspiciousAccessAlertEntry(
+            AlertCode: suspiciousRes.Value.AlertCode,
+            Description: suspiciousRes.Value.Description,
+            CredentialType: credentialType,
+            CredentialValue: credentialValue,
+            ReaderId: readerId,
+            DoorId: doorId,
+            StudentId: studentId,
+            Attempts: suspiciousRes.Value.Attempts), ct);
     }
 }
