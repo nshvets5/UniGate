@@ -42,6 +42,7 @@ public static class NotificationsModuleServiceCollectionExtensions
         services.AddScoped<SendTimetableImportSummaryUseCase>();
         services.AddScoped<SendSuspiciousAccessAlertUseCase>();
         services.AddScoped<SendHealthAlertUseCase>();
+        services.AddScoped<SendReaderOfflineAlertUseCase>();
 
         return services;
     }

@@ -18,6 +18,8 @@ public sealed class ReaderDevice
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastSeenAt { get; private set; }
 
+    public DateTimeOffset? LastOfflineAlertAt { get; private set; }
+
     private ReaderDevice() { }
 
     public ReaderDevice(string code, string name, Guid doorId, ReaderDeviceType type)
@@ -45,5 +47,10 @@ public sealed class ReaderDevice
     public void Touch()
     {
         LastSeenAt = DateTimeOffset.UtcNow;
+    }
+
+    public void MarkOfflineAlertRaised()
+    {
+        LastOfflineAlertAt = DateTimeOffset.UtcNow;
     }
 }

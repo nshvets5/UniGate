@@ -4,11 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using UniGate.Devices.Application.Attempts;
 using UniGate.Devices.Application.Auth;
 using UniGate.Devices.Application.DeviceSelf;
+using UniGate.Devices.Application.Monitoring;
 using UniGate.Devices.Application.Readers;
 using UniGate.Devices.Application.Scan;
 using UniGate.Devices.Infrastructure.Attempts;
 using UniGate.Devices.Infrastructure.Auth;
 using UniGate.Devices.Infrastructure.DeviceSelf;
+using UniGate.Devices.Infrastructure.Monitoring;
 using UniGate.Devices.Infrastructure.Persistence;
 using UniGate.Devices.Infrastructure.Scan;
 using UniGate.Devices.Infrastructure.Stores;
@@ -61,6 +63,9 @@ public static class DevicesModuleServiceCollectionExtensions
         services.AddScoped<SendDeviceHeartbeatUseCase>();
         services.AddScoped<ListDeviceOwnAttemptsUseCase>();
         services.AddScoped<GetDeviceDashboardUseCase>();
+
+        services.AddScoped<IReaderOfflineMonitorStore, EfReaderOfflineMonitorStore>();
+        services.AddHostedService<ReaderOfflineMonitorHostedService>();
 
         return services;
     }

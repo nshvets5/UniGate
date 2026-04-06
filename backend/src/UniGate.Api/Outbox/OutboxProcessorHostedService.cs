@@ -41,6 +41,8 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                     .GetRequiredService<SendSuspiciousAccessAlertUseCase>();
                 var healthAlertNotifier = scope.ServiceProvider
                     .GetRequiredService<SendHealthAlertUseCase>();
+                var readerOfflineNotifier = scope.ServiceProvider
+                    .GetRequiredService<SendReaderOfflineAlertUseCase>();
 
                 var batch = await reader.DequeueBatchAsync(batchSize: 20, ct);
 
@@ -64,6 +66,7 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                             timetableNotifier,
                             suspiciousAccessNotifier,
                             healthAlertNotifier,
+                            readerOfflineNotifier,
                             ct);
                         await reader.MarkProcessedAsync(msg.Id, ct);
                     }
@@ -102,6 +105,7 @@ public sealed class OutboxProcessorHostedService : BackgroundService
         SendTimetableImportSummaryUseCase timetableNotifier,
         SendSuspiciousAccessAlertUseCase suspiciousAccessNotifier,
         SendHealthAlertUseCase healthAlertNotifier,
+        SendReaderOfflineAlertUseCase readerOfflineNotifier,
         CancellationToken ct)
     {
         if (msg.Type == "iam.user_profile_provisioned")
@@ -329,6 +333,16 @@ public sealed class OutboxProcessorHostedService : BackgroundService
                 throw new InvalidOperationException("Invalid health alert payload.");
 
             await healthAlertNotifier.ExecuteAsync(payload, ct);
+            return;
+        }
+
+        if (msg.Type == TimetableOutboxTypes.ReaderOfflineDetected)
+        {
+            var payload = JsonSerializer.Deserialize<ReaderOfflineDetectedPayload>(msg.PayloadJson);
+            if (payload is null)
+                throw new InvalidOperationException("Invalid reader offline payload.");
+
+            await readerOfflineNotifier.ExecuteAsync(payload, ct);
             return;
         }
 

@@ -29,6 +29,7 @@ public sealed class DevicesDbContext : DbContext
             b.Property(x => x.ApiKeyHash).HasMaxLength(500);
             b.Property(x => x.CreatedAt).IsRequired();
             b.Property(x => x.LastSeenAt);
+            b.Property(x => x.LastOfflineAlertAt);
 
             b.HasIndex(x => x.Code).IsUnique();
             b.HasIndex(x => x.DoorId);
