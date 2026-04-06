@@ -104,4 +104,66 @@ public sealed class EfDeviceSelfStore : IDeviceSelfStore
             return Result<PagedResult<ReaderScanAttemptDto>>.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }
+
+    public async Task<Result<DeviceDashboardDto>> GetDashboardAsync(
+        Guid readerId,
+        int recentTake,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var device = await _db.ReaderDevices.AsNoTracking()
+                .Where(x => x.Id == readerId)
+                .Select(x => new DeviceSelfDto(
+                    x.Id,
+                    x.Code,
+                    x.Name,
+                    x.DoorId,
+                    x.Type,
+                    x.IsActive,
+                    x.LastSeenAt))
+                .FirstOrDefaultAsync(ct);
+
+            if (device is null)
+                return Result<DeviceDashboardDto>.Failure(
+                    new Error("devices.reader.not_found", "Reader not found."));
+
+            var attemptsBase = _db.ReaderScanAttempts.AsNoTracking()
+                .Where(x => x.ReaderId == readerId);
+
+            var totalAttempts = await attemptsBase.CountAsync(ct);
+            var allowedAttempts = await attemptsBase.CountAsync(x => x.IsAllowed, ct);
+            var deniedAttempts = totalAttempts - allowedAttempts;
+
+            var recentAttempts = await attemptsBase
+                .OrderByDescending(x => x.OccurredAt)
+                .Take(recentTake)
+                .Select(x => new ReaderScanAttemptDto(
+                    x.Id,
+                    x.ReaderId,
+                    x.CredentialType,
+                    x.CredentialValue,
+                    x.CredentialId,
+                    x.StudentId,
+                    x.IsAllowed,
+                    x.ReasonCode,
+                    x.OccurredAt))
+                .ToListAsync(ct);
+
+            var dto = new DeviceDashboardDto(
+                Device: device,
+                Counters: new DeviceDashboardCountersDto(
+                    TotalAttempts: totalAttempts,
+                    AllowedAttempts: allowedAttempts,
+                    DeniedAttempts: deniedAttempts),
+                RecentAttempts: recentAttempts);
+
+            return Result<DeviceDashboardDto>.Success(dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Get device dashboard failed");
+            return Result<DeviceDashboardDto>.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+    }
 }

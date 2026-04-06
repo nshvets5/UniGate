@@ -60,6 +60,7 @@ public static class DevicesModuleServiceCollectionExtensions
         services.AddScoped<GetDeviceSelfUseCase>();
         services.AddScoped<SendDeviceHeartbeatUseCase>();
         services.AddScoped<ListDeviceOwnAttemptsUseCase>();
+        services.AddScoped<GetDeviceDashboardUseCase>();
 
         return services;
     }

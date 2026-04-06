@@ -15,4 +15,9 @@ public interface IDeviceSelfStore
         int page,
         int pageSize,
         CancellationToken ct = default);
+
+    Task<Result<DeviceDashboardDto>> GetDashboardAsync(
+        Guid readerId,
+        int recentTake,
+        CancellationToken ct = default);
 }
