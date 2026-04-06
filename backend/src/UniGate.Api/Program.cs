@@ -8,6 +8,9 @@ using UniGate.Api.Files;
 using UniGate.Api.HealthChecks;
 using UniGate.Api.Middleware;
 using UniGate.Api.Observability;
+using UniGate.Api.Outbox;
+using UniGate.Api.Outbox.Handlers.Audit;
+using UniGate.Api.Outbox.Handlers.Notifications;
 using UniGate.Api.Security;
 using UniGate.Api.Swagger;
 using UniGate.Audit.Infrastructure.DependencyInjection;
@@ -98,6 +101,20 @@ builder.Services.AddDevicesModule(builder.Configuration);
 
 builder.Services.AddScoped<ICurrentProfileIdAccessor, CurrentProfileIdAccessor>();
 builder.Services.AddScoped<ITextFileReader, Utf8TextFileReader>();
+
+builder.Services.AddScoped<DirectoryStudentProfileBinder>();
+
+builder.Services.AddScoped<IOutboxMessageDispatcher, OutboxMessageDispatcher>();
+
+builder.Services.AddScoped<IOutboxMessageHandler, IamUserProfileProvisionedHandler>();
+builder.Services.AddScoped<IOutboxMessageHandler, DirectoryGroupAuditHandler>();
+builder.Services.AddScoped<IOutboxMessageHandler, DirectoryStudentAuditHandler>();
+builder.Services.AddScoped<IOutboxMessageHandler, AccessAuditHandler>();
+
+builder.Services.AddScoped<IOutboxMessageHandler, TimetableImportCompletedHandler>();
+builder.Services.AddScoped<IOutboxMessageHandler, SuspiciousAccessDetectedHandler>();
+builder.Services.AddScoped<IOutboxMessageHandler, HealthAlertRaisedHandler>();
+builder.Services.AddScoped<IOutboxMessageHandler, ReaderOfflineDetectedHandler>();
 
 builder.Services.AddHostedService<UniGate.Api.Outbox.OutboxProcessorHostedService>();
 
