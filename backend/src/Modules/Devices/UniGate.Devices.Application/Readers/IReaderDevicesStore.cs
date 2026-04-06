@@ -13,9 +13,13 @@ public interface IReaderDevicesStore
 
     Task<Result<ReaderDeviceDto>> GetByCodeAsync(string code, CancellationToken ct = default);
 
+    Task<Result<ReaderDeviceStatusDto>> GetStatusAsync(Guid id, CancellationToken ct = default);
+
     Task<Result> UpdateAsync(UpdateReaderDeviceCommand cmd, CancellationToken ct = default);
 
     Task<Result> SetActiveAsync(Guid id, bool isActive, CancellationToken ct = default);
 
     Task<Result> TouchAsync(Guid id, CancellationToken ct = default);
+
+    Task<Result<ReaderApiKeyRotatedDto>> RotateApiKeyAsync(Guid id, CancellationToken ct = default);
 }

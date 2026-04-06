@@ -50,6 +50,9 @@ public static class DevicesModuleServiceCollectionExtensions
         services.AddScoped<IReaderScanAttemptsQueryStore, EfReaderScanAttemptsQueryStore>();
         services.AddScoped<ListReaderScanAttemptsUseCase>();
 
+        services.AddScoped<GetReaderDeviceStatusUseCase>();
+        services.AddScoped<RotateReaderApiKeyUseCase>();
+
         return services;
     }
 }

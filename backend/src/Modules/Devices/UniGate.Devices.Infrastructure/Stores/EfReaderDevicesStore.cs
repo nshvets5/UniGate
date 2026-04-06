@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using UniGate.Devices.Application.Readers;
@@ -29,22 +31,19 @@ public sealed class EfReaderDevicesStore : IReaderDevicesStore
                 .AnyAsync(x => x.Code == code, ct);
 
             if (exists)
-                return Result<ReaderDeviceCreatedDto>.Failure(new Error("devices.reader.duplicate_code", "Reader code already exists."));
+                return Result<ReaderDeviceCreatedDto>.Failure(
+                    new Error("devices.reader.duplicate_code", "Reader code already exists."));
 
             var reader = new ReaderDevice(code, cmd.Name.Trim(), cmd.DoorId, cmd.Type);
-            var apiKey = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
 
-            var hash = Convert.ToBase64String(
-                System.Security.Cryptography.SHA256.HashData(
-                    System.Text.Encoding.UTF8.GetBytes(apiKey)));
-
-            reader.SetApiKeyHash(hash);
+            var apiKey = GenerateApiKey();
+            reader.SetApiKeyHash(Hash(apiKey));
 
             _db.ReaderDevices.Add(reader);
             await _db.SaveChangesAsync(ct);
 
             return Result<ReaderDeviceCreatedDto>.Success(
-                new ReaderDeviceCreatedDto(reader.Id, apiKey));
+                new ReaderDeviceCreatedDto(reader.Id, reader.Code, apiKey));
         }
         catch (Exception ex)
         {
@@ -152,6 +151,54 @@ public sealed class EfReaderDevicesStore : IReaderDevicesStore
         }
     }
 
+    public async Task<Result<ReaderDeviceStatusDto>> GetStatusAsync(Guid id, CancellationToken ct = default)
+    {
+        try
+        {
+            var item = await _db.ReaderDevices.AsNoTracking()
+                .Where(x => x.Id == id)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.Code,
+                    x.Name,
+                    x.DoorId,
+                    x.Type,
+                    x.IsActive,
+                    x.ApiKeyHash,
+                    x.CreatedAt,
+                    x.LastSeenAt
+                })
+                .FirstOrDefaultAsync(ct);
+
+            if (item is null)
+                return Result<ReaderDeviceStatusDto>.Failure(
+                    new Error("devices.reader.not_found", "Reader device not found."));
+
+            var now = DateTimeOffset.UtcNow;
+            var isOnline = item.LastSeenAt is not null && (now - item.LastSeenAt.Value) <= TimeSpan.FromMinutes(2);
+
+            return Result<ReaderDeviceStatusDto>.Success(
+                new ReaderDeviceStatusDto(
+                    item.Id,
+                    item.Code,
+                    item.Name,
+                    item.DoorId,
+                    item.Type,
+                    item.IsActive,
+                    !string.IsNullOrWhiteSpace(item.ApiKeyHash),
+                    item.CreatedAt,
+                    item.LastSeenAt,
+                    now,
+                    isOnline));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Get reader device status failed");
+            return Result<ReaderDeviceStatusDto>.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+    }
+
     public async Task<Result> UpdateAsync(UpdateReaderDeviceCommand cmd, CancellationToken ct = default)
     {
         try
@@ -230,4 +277,34 @@ public sealed class EfReaderDevicesStore : IReaderDevicesStore
             return Result.Failure(Errors.Infrastructure.DatabaseFailure);
         }
     }
+
+    public async Task<Result<ReaderApiKeyRotatedDto>> RotateApiKeyAsync(Guid id, CancellationToken ct = default)
+    {
+        try
+        {
+            var entity = await _db.ReaderDevices.FirstOrDefaultAsync(x => x.Id == id, ct);
+            if (entity is null)
+                return Result<ReaderApiKeyRotatedDto>.Failure(
+                    new Error("devices.reader.not_found", "Reader device not found."));
+
+            var apiKey = GenerateApiKey();
+            entity.SetApiKeyHash(Hash(apiKey));
+
+            await _db.SaveChangesAsync(ct);
+
+            return Result<ReaderApiKeyRotatedDto>.Success(
+                new ReaderApiKeyRotatedDto(entity.Id, entity.Code, apiKey));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Rotate reader api key failed");
+            return Result<ReaderApiKeyRotatedDto>.Failure(Errors.Infrastructure.DatabaseFailure);
+        }
+    }
+
+    private static string GenerateApiKey()
+        => Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+
+    private static string Hash(string value)
+        => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 }

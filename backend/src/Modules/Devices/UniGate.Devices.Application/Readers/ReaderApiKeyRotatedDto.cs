@@ -1,6 +1,6 @@
 namespace UniGate.Devices.Application.Readers;
 
-public sealed record ReaderDeviceCreatedDto(
+public sealed record ReaderApiKeyRotatedDto(
     Guid Id,
     string Code,
     string ApiKey);
