@@ -18,17 +18,25 @@ public sealed class DeviceAuthMiddleware
         {
             var apiKey = context.Request.Headers["X-Device-Key"].FirstOrDefault();
 
-            if (!string.IsNullOrWhiteSpace(apiKey))
+            if (string.IsNullOrWhiteSpace(apiKey))
             {
-                var res = await store.FindByApiKeyAsync(apiKey);
-
-                if (res.IsSuccess && res.Value.IsActive)
-                {
-                    context.Items["device"] = new DeviceAuthContext(
-                        res.Value.ReaderId,
-                        res.Value.Code);
-                }
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Missing X-Device-Key header.");
+                return;
             }
+
+            var res = await store.FindByApiKeyAsync(apiKey, context.RequestAborted);
+
+            if (!res.IsSuccess || !res.Value.IsActive)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Invalid or inactive device key.");
+                return;
+            }
+
+            context.Items["device"] = new DeviceAuthContext(
+                res.Value.ReaderId,
+                res.Value.Code);
         }
 
         await _next(context);

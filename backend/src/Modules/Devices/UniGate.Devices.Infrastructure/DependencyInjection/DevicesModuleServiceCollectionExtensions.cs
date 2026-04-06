@@ -3,10 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UniGate.Devices.Application.Attempts;
 using UniGate.Devices.Application.Auth;
+using UniGate.Devices.Application.DeviceSelf;
 using UniGate.Devices.Application.Readers;
 using UniGate.Devices.Application.Scan;
 using UniGate.Devices.Infrastructure.Attempts;
 using UniGate.Devices.Infrastructure.Auth;
+using UniGate.Devices.Infrastructure.DeviceSelf;
 using UniGate.Devices.Infrastructure.Persistence;
 using UniGate.Devices.Infrastructure.Scan;
 using UniGate.Devices.Infrastructure.Stores;
@@ -52,6 +54,12 @@ public static class DevicesModuleServiceCollectionExtensions
 
         services.AddScoped<GetReaderDeviceStatusUseCase>();
         services.AddScoped<RotateReaderApiKeyUseCase>();
+
+        services.AddScoped<IDeviceSelfStore, EfDeviceSelfStore>();
+
+        services.AddScoped<GetDeviceSelfUseCase>();
+        services.AddScoped<SendDeviceHeartbeatUseCase>();
+        services.AddScoped<ListDeviceOwnAttemptsUseCase>();
 
         return services;
     }
