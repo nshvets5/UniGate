@@ -118,6 +118,17 @@ builder.Services.AddScoped<IOutboxMessageHandler, ReaderOfflineDetectedHandler>(
 
 builder.Services.AddHostedService<UniGate.Api.Outbox.OutboxProcessorHostedService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services
     .AddAppAuthentication(builder.Configuration)
     .AddAppAuthorization()
