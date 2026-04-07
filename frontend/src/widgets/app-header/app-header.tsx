@@ -5,10 +5,11 @@ import {
     AppBar,
     Box,
     IconButton,
-    Toolbar,
     Tooltip,
+    Toolbar,
     Typography,
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { toggleLocale, toggleThemeMode } from '../../app/store/preferences.slice';
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks';
@@ -16,22 +17,29 @@ import { useAppDispatch, useAppSelector } from '../../app/store/hooks';
 export function AppHeader() {
     const { t } = useTranslation();
     const dispatch = useAppDispatch();
+    const theme = useTheme();
     const themeMode = useAppSelector((state) => state.preferences.themeMode);
     const locale = useAppSelector((state) => state.preferences.locale);
 
     return (
         <AppBar
-            position="static"
+            position="sticky"
             color="transparent"
             elevation={0}
             sx={{
-                borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                bgcolor: 'background.paper',
+                px: { xs: 2, md: 3 },
+                borderBottom: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
+                bgcolor:
+                    theme.palette.mode === 'dark'
+                        ? 'rgba(11,18,32,0.72)'
+                        : 'rgba(255,255,255,0.78)',
+                backdropFilter: 'blur(14px)',
             }}
         >
-            <Toolbar sx={{ justifyContent: 'space-between' }}>
+            <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
                 <Box>
-                    <Typography variant="h6" fontWeight={700}>
+                    <Typography variant="h6">UniGate</Typography>
+                    <Typography variant="body2" color="text.secondary">
                         {t('layout.admin')}
                     </Typography>
                 </Box>
@@ -43,9 +51,21 @@ export function AppHeader() {
                         </IconButton>
                     </Tooltip>
 
-                    <Typography variant="body2" sx={{ minWidth: 28 }}>
-                        {locale.toUpperCase()}
-                    </Typography>
+                    <Box
+                        sx={{
+                            minWidth: 36,
+                            px: 1.25,
+                            py: 0.75,
+                            borderRadius: 999,
+                            bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.16 : 0.10),
+                            color: 'primary.main',
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Typography variant="caption" fontWeight={700}>
+                            {locale.toUpperCase()}
+                        </Typography>
+                    </Box>
 
                     <Tooltip title={t('actions.switchTheme')}>
                         <IconButton onClick={() => dispatch(toggleThemeMode())}>

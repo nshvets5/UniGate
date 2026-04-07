@@ -3,7 +3,6 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import {
     Box,
-    Divider,
     List,
     ListItemButton,
     ListItemIcon,
@@ -11,10 +10,11 @@ import {
     Toolbar,
     Typography,
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
-const drawerWidth = 260;
+const drawerWidth = 272;
 
 const navItems = [
     {
@@ -36,45 +36,72 @@ const navItems = [
 
 export function AppSidebar() {
     const { t } = useTranslation();
+    const theme = useTheme();
 
     return (
         <Box
             sx={{
                 width: drawerWidth,
                 height: '100vh',
-                borderRight: (theme) => `1px solid ${theme.palette.divider}`,
+                position: 'sticky',
+                top: 0,
+                borderRight: `1px solid ${theme.palette.divider}`,
+                bgcolor: theme.palette.mode === 'dark' ? '#0F172A' : '#FFFFFF',
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: 'background.paper',
             }}
         >
-            <Toolbar>
-                <Typography variant="h6" fontWeight={700}>
-                    {t('app.title')}
-                </Typography>
+            <Toolbar
+                sx={{
+                    px: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                }}
+            >
+                <Box>
+                    <Typography variant="subtitle1" fontWeight={800}>
+                        {t('app.title')}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        Access Control Platform
+                    </Typography>
+                </Box>
             </Toolbar>
 
-            <Divider />
-
-            <List sx={{ px: 1, py: 1 }}>
-                {navItems.map((item) => (
-                    <ListItemButton
-                        key={item.to}
-                        component={NavLink}
-                        to={item.to}
-                        sx={{
-                            mb: 0.5,
-                            borderRadius: 2,
-                            '&.active': {
-                                bgcolor: 'action.selected',
-                            },
-                        }}
-                    >
-                        <ListItemIcon>{item.icon}</ListItemIcon>
-                        <ListItemText primary={t(item.labelKey)} />
-                    </ListItemButton>
-                ))}
-            </List>
+            <Box sx={{ px: 2, pb: 2 }}>
+                <List sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    {navItems.map((item) => (
+                        <ListItemButton
+                            key={item.to}
+                            component={NavLink}
+                            to={item.to}
+                            sx={{
+                                px: 1.5,
+                                '& .MuiListItemIcon-root': {
+                                    minWidth: 40,
+                                    color: 'text.secondary',
+                                },
+                                '& .MuiListItemText-primary': {
+                                    fontWeight: 500,
+                                },
+                                '&.active': {
+                                    bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.16 : 0.12),
+                                    '& .MuiListItemIcon-root': {
+                                        color: theme.palette.primary.main,
+                                    },
+                                    '& .MuiListItemText-primary': {
+                                        color: theme.palette.primary.main,
+                                        fontWeight: 700,
+                                    },
+                                },
+                            }}
+                        >
+                            <ListItemIcon>{item.icon}</ListItemIcon>
+                            <ListItemText primary={t(item.labelKey)} />
+                        </ListItemButton>
+                    ))}
+                </List>
+            </Box>
         </Box>
     );
 }

@@ -5,13 +5,33 @@ import { AppSidebar } from '../widgets/app-sidebar/app-sidebar';
 
 export function AdminLayout() {
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+        <Box
+            sx={{
+                display: 'flex',
+                minHeight: '100vh',
+                bgcolor: 'background.default',
+            }}
+        >
             <AppSidebar />
 
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <Box
+                sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
+            >
                 <AppHeader />
 
-                <Box component="main" sx={{ p: 3, flex: 1 }}>
+                <Box
+                    component="main"
+                    sx={{
+                        flex: 1,
+                        px: { xs: 2, md: 3 },
+                        py: { xs: 2, md: 3 },
+                    }}
+                >
                     <Outlet />
                 </Box>
             </Box>
