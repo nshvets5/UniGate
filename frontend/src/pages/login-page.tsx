@@ -18,25 +18,24 @@ export function LoginPage() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
-    const [email, setEmail] = useState('admin@unigate.local');
-    const [password, setPassword] = useState('Admin123!');
+    const [token, setToken] = useState('');
     const [error, setError] = useState<string | null>(null);
 
     const handleLogin = () => {
-        if (!email.trim() || !password.trim()) {
-            setError('Please enter email and password.');
+        if (!token.trim()) {
+            setError('Please enter an access token.');
             return;
         }
 
         setError(null);
 
         startSession(dispatch, {
-            accessToken: 'stub-token',
+            accessToken: token.trim(),
             user: {
-                subject: 'stub-admin-subject',
-                email,
-                displayName: 'System Administrator',
-                roles: ['Admin'],
+                subject: 'bootstrap-pending',
+                email: null,
+                displayName: 'Loading profile...',
+                roles: [],
             },
         });
 
@@ -56,7 +55,7 @@ export function LoginPage() {
             <Paper
                 sx={{
                     width: '100%',
-                    maxWidth: 460,
+                    maxWidth: 520,
                     p: 4,
                     borderRadius: 4,
                     border: (theme) => `1px solid ${theme.palette.divider}`,
@@ -81,26 +80,24 @@ export function LoginPage() {
                         <Box>
                             <Typography variant="h4">Sign in</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Enter your credentials to access the UniGate administration panel.
+                                Temporary development sign-in. Paste a valid bearer token to access the UniGate admin panel.
                             </Typography>
                         </Box>
                     </Stack>
 
+                    <Alert severity="info">
+                        This is a temporary auth screen. The app will validate the token against <strong>/api/me</strong>.
+                    </Alert>
+
                     {error ? <Alert severity="error">{error}</Alert> : null}
 
                     <TextField
-                        label="Email"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
+                        label="Access token"
+                        value={token}
+                        onChange={(event) => setToken(event.target.value)}
                         fullWidth
-                    />
-
-                    <TextField
-                        label="Password"
-                        type="password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        fullWidth
+                        multiline
+                        minRows={4}
                     />
 
                     <Button
@@ -109,7 +106,7 @@ export function LoginPage() {
                         startIcon={<LoginOutlinedIcon />}
                         onClick={handleLogin}
                     >
-                        Sign in
+                        Continue
                     </Button>
                 </Stack>
             </Paper>

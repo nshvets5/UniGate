@@ -4,6 +4,7 @@ import { ThemeProviderWrapper } from './theme-provider';
 import { I18nProvider } from './i18n-provider';
 import { RouterProviderWrapper } from './router-provider';
 import { SnackbarProvider } from 'notistack';
+import { AuthBootstrapProvider } from './auth-bootstrap-provider';
 
 export function AppProviders() {
     return (
@@ -12,7 +13,9 @@ export function AppProviders() {
                 <I18nProvider>
                     <ThemeProviderWrapper>
                         <SnackbarProvider maxSnack={3}>
-                            <RouterProviderWrapper />
+                            <AuthBootstrapProvider>
+                                <RouterProviderWrapper />
+                            </AuthBootstrapProvider>
                         </SnackbarProvider>
                     </ThemeProviderWrapper>
                 </I18nProvider>
