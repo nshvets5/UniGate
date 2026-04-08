@@ -1,14 +1,19 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AdminLayout } from '../../layouts/admin-layout';
-import { DashboardPage } from '../../pages/dashboard-page';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+
+function LoginPage() {
+    return <div>Login Page Works</div>;
+}
+
+function DashboardPage() {
+    return <div>Dashboard Page Works</div>;
+}
 
 export function RouterProviderWrapper() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<AdminLayout />}>
-                    <Route index element={<DashboardPage />} />
-                </Route>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/" element={<DashboardPage />} />
             </Routes>
         </BrowserRouter>
     );

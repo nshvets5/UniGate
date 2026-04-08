@@ -1,6 +1,7 @@
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import {
     AppBar,
     Box,
@@ -11,15 +12,24 @@ import {
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toggleLocale, toggleThemeMode } from '../../app/store/preferences.slice';
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks';
+import { endSession } from '../../shared/auth/auth-session';
 
 export function AppHeader() {
     const { t } = useTranslation();
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const theme = useTheme();
     const themeMode = useAppSelector((state) => state.preferences.themeMode);
     const locale = useAppSelector((state) => state.preferences.locale);
+    const user = useAppSelector((state) => state.auth.user);
+
+    const handleLogout = () => {
+        endSession(dispatch);
+        navigate('/login', { replace: true });
+    };
 
     return (
         <AppBar
@@ -40,7 +50,7 @@ export function AppHeader() {
                 <Box>
                     <Typography variant="h6">UniGate</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        {t('layout.admin')}
+                        {user?.displayName ?? t('layout.admin')}
                     </Typography>
                 </Box>
 
@@ -70,6 +80,12 @@ export function AppHeader() {
                     <Tooltip title={t('actions.switchTheme')}>
                         <IconButton onClick={() => dispatch(toggleThemeMode())}>
                             {themeMode === 'light' ? <DarkModeOutlinedIcon /> : <LightModeOutlinedIcon />}
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Sign out">
+                        <IconButton onClick={handleLogout}>
+                            <LogoutOutlinedIcon />
                         </IconButton>
                     </Tooltip>
                 </Box>
