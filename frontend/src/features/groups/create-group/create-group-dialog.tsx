@@ -1,6 +1,7 @@
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import {
+    Alert,
     Button,
     Dialog,
     DialogActions,
@@ -11,46 +12,57 @@ import {
     TextField,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-
-type CreateGroupPayload = {
-    code: string;
-    name: string;
-    admissionYear: number;
-};
+import { useCreateGroupMutation } from './use-create-group-mutation';
 
 type CreateGroupDialogProps = {
     open: boolean;
     onClose: () => void;
-    onCreate: (payload: CreateGroupPayload) => void;
 };
 
 export function CreateGroupDialog({
                                       open,
                                       onClose,
-                                      onCreate,
                                   }: CreateGroupDialogProps) {
     const [code, setCode] = useState('');
     const [name, setName] = useState('');
     const [admissionYear, setAdmissionYear] = useState('');
+    const [error, setError] = useState<string | null>(null);
+
+    const createMutation = useCreateGroupMutation();
 
     useEffect(() => {
         if (!open) {
             setCode('');
             setName('');
             setAdmissionYear('');
+            setError(null);
         }
     }, [open]);
 
-    const handleSubmit = () => {
-        onCreate({
-            code: code.trim(),
-            name: name.trim(),
-            admissionYear: Number(admissionYear),
-        });
+    const handleSubmit = async () => {
+        try {
+            setError(null);
+
+            await createMutation.mutateAsync({
+                code: code.trim(),
+                name: name.trim(),
+                admissionYear: Number(admissionYear),
+            });
+
+            onClose();
+        } catch {
+            setError('Failed to create group. Please check the input and try again.');
+        }
     };
 
+    const isSubmitDisabled =
+        createMutation.isPending ||
+        !code.trim() ||
+        !name.trim() ||
+        !admissionYear.trim();
+
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+        <Dialog open={open} onClose={createMutation.isPending ? undefined : onClose} fullWidth maxWidth="sm">
             <DialogTitle
                 sx={{
                     display: 'flex',
@@ -59,13 +71,15 @@ export function CreateGroupDialog({
                 }}
             >
                 Create group
-                <IconButton onClick={onClose}>
+                <IconButton onClick={onClose} disabled={createMutation.isPending}>
                     <CloseOutlinedIcon />
                 </IconButton>
             </DialogTitle>
 
             <DialogContent dividers>
                 <Stack spacing={2.5} sx={{ pt: 1 }}>
+                    {error ? <Alert severity="error">{error}</Alert> : null}
+
                     <TextField
                         label="Code"
                         value={code}
@@ -91,13 +105,15 @@ export function CreateGroupDialog({
             </DialogContent>
 
             <DialogActions sx={{ px: 3, py: 2 }}>
-                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={onClose} disabled={createMutation.isPending}>
+                    Cancel
+                </Button>
 
                 <Button
                     variant="contained"
                     startIcon={<SaveOutlinedIcon />}
-                    onClick={handleSubmit}
-                    disabled={!code.trim() || !name.trim() || !admissionYear.trim()}
+                    onClick={() => void handleSubmit()}
+                    disabled={isSubmitDisabled}
                 >
                     Save
                 </Button>

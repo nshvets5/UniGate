@@ -3,7 +3,7 @@ import type { PagedResult } from '../../shared/types/pagination';
 import type { CreateGroupRequest, GetGroupsParams, GroupDto } from './types';
 
 export async function getGroups(params: GetGroupsParams) {
-    const response = await api.get<PagedResult<GroupDto>>('/api/groups', {
+    const response = await api.get<PagedResult<GroupDto>>('/groups', {
         params,
     });
 
@@ -11,6 +11,6 @@ export async function getGroups(params: GetGroupsParams) {
 }
 
 export async function createGroup(payload: CreateGroupRequest) {
-    const response = await api.post<GroupDto>('/api/groups', payload);
+    const response = await api.post<GroupDto>('/groups', payload);
     return response.data;
 }

@@ -8,67 +8,32 @@ import {
 } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CreateGroupDialog } from '../features/groups/create-group/create-group-dialog';
+import { useGroupsQuery } from '../features/groups/list-groups/use-groups-query';
 import { EmptyState } from '../shared/ui/empty-state';
 import { EntityToolbar } from '../shared/ui/entity-toolbar';
+import { ErrorState } from '../shared/ui/error-state';
+import { LoadingState } from '../shared/ui/loading-state';
 import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
-import { CreateGroupDialog } from '../features/groups/create-group/create-group-dialog';
-
-type MockGroup = {
-    id: string;
-    code: string;
-    name: string;
-    admissionYear: number;
-    isActive: boolean;
-    createdAt: string;
-};
-
-const initialGroups: MockGroup[] = [
-    {
-        id: '1',
-        code: 'PZPI-22-5',
-        name: 'ПЗПІ-22-5',
-        admissionYear: 2022,
-        isActive: true,
-        createdAt: '2026-04-01T10:00:00Z',
-    },
-    {
-        id: '2',
-        code: 'PZPI-23-1',
-        name: 'ПЗПІ-23-1',
-        admissionYear: 2023,
-        isActive: true,
-        createdAt: '2026-04-01T10:00:00Z',
-    },
-    {
-        id: '3',
-        code: 'KN-21-2',
-        name: 'КН-21-2',
-        admissionYear: 2021,
-        isActive: false,
-        createdAt: '2026-04-01T10:00:00Z',
-    },
-];
 
 export function GroupsPage() {
     const { t } = useTranslation();
     const [search, setSearch] = useState('');
     const [createOpen, setCreateOpen] = useState(false);
-    const [groups, setGroups] = useState<MockGroup[]>(initialGroups);
 
-    const filteredGroups = useMemo(() => {
-        const normalized = search.trim().toLowerCase();
+    const queryParams = useMemo(
+        () => ({
+            search: search || undefined,
+            page: 1,
+            pageSize: 20,
+        }),
+        [search]
+    );
 
-        if (!normalized) return groups;
-
-        return groups.filter(
-            (group) =>
-                group.code.toLowerCase().includes(normalized) ||
-                group.name.toLowerCase().includes(normalized)
-        );
-    }, [groups, search]);
+    const groupsQuery = useGroupsQuery(queryParams);
 
     return (
         <PageContainer>
@@ -98,17 +63,28 @@ export function GroupsPage() {
 
                     <Divider />
 
-                    {filteredGroups.length === 0 ? (
+                    {groupsQuery.isLoading ? (
+                        <LoadingState
+                            title="Loading groups"
+                            description="Please wait while academic groups are being loaded."
+                        />
+                    ) : groupsQuery.isError ? (
+                        <ErrorState
+                            title="Failed to load groups"
+                            description="The groups list could not be loaded from the server."
+                            onRetry={() => void groupsQuery.refetch()}
+                        />
+                    ) : !groupsQuery.data || groupsQuery.data.items.length === 0 ? (
                         <EmptyState
                             title="No groups found"
-                            description="No groups match the current search criteria. Try a different query or create a new academic group."
+                            description="Create the first academic group to start working with the directory module."
                             action={
                                 <Button
                                     variant="contained"
                                     startIcon={<AddOutlinedIcon />}
                                     onClick={() => setCreateOpen(true)}
                                 >
-                                    Create group
+                                    Create first group
                                 </Button>
                             }
                         />
@@ -116,14 +92,14 @@ export function GroupsPage() {
                         <Stack spacing={0}>
                             <Box sx={{ px: 3, py: 2 }}>
                                 <Typography variant="body2" color="text.secondary">
-                                    Total records: {filteredGroups.length}
+                                    Total records: {groupsQuery.data.totalCount}
                                 </Typography>
                             </Box>
 
                             <Divider />
 
                             <Stack divider={<Divider />}>
-                                {filteredGroups.map((group) => (
+                                {groupsQuery.data.items.map((group) => (
                                     <Box
                                         key={group.id}
                                         sx={{
@@ -158,19 +134,6 @@ export function GroupsPage() {
             <CreateGroupDialog
                 open={createOpen}
                 onClose={() => setCreateOpen(false)}
-                onCreate={(payload) => {
-                    const newGroup: MockGroup = {
-                        id: crypto.randomUUID(),
-                        code: payload.code,
-                        name: payload.name,
-                        admissionYear: payload.admissionYear,
-                        isActive: true,
-                        createdAt: new Date().toISOString(),
-                    };
-
-                    setGroups((prev) => [newGroup, ...prev]);
-                    setCreateOpen(false);
-                }}
             />
         </PageContainer>
     );
