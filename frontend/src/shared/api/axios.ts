@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { env } from '../../app/config/env';
-import { getAccessToken } from '../auth/token-storage';
+import { keycloak } from '../auth/keycloak';
 
 export const api = axios.create({
     baseURL: env.apiBaseUrl,
@@ -9,11 +9,17 @@ export const api = axios.create({
     },
 });
 
-api.interceptors.request.use((config) => {
-    const token = getAccessToken();
+api.interceptors.request.use(async (config) => {
+    if (keycloak.authenticated) {
+        try {
+            await keycloak.updateToken(30);
+        } catch {
+            // ignore here; guarded routes and logout flow handle invalid session
+        }
 
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        if (keycloak.token) {
+            config.headers.Authorization = `Bearer ${keycloak.token}`;
+        }
     }
 
     return config;

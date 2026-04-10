@@ -1,5 +1,4 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { getAccessToken } from '../../shared/auth/token-storage';
 
 export type AuthUser = {
     subject: string;
@@ -10,13 +9,15 @@ export type AuthUser = {
 
 type AuthState = {
     isAuthenticated: boolean;
+    isBootstrapped: boolean;
     accessToken: string | null;
     user: AuthUser | null;
 };
 
 const initialState: AuthState = {
-    isAuthenticated: Boolean(getAccessToken()),
-    accessToken: getAccessToken(),
+    isAuthenticated: false,
+    isBootstrapped: false,
+    accessToken: null,
     user: null,
 };
 
@@ -43,8 +44,13 @@ const authSlice = createSlice({
         setUser(state, action: PayloadAction<AuthUser | null>) {
             state.user = action.payload;
         },
+        setBootstrapped(state, action: PayloadAction<boolean>) {
+            state.isBootstrapped = action.payload;
+        },
     },
 });
 
-export const { setSession, clearSession, setUser } = authSlice.actions;
+export const { setSession, clearSession, setUser, setBootstrapped } =
+    authSlice.actions;
+
 export const authReducer = authSlice.reducer;

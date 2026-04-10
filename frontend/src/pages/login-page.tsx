@@ -1,45 +1,31 @@
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LoginOutlinedIcon from '@mui/icons-material/LoginOutlined';
-import {
-    Alert,
-    Box,
-    Button,
-    Paper,
-    Stack,
-    TextField,
-    Typography,
-} from '@mui/material';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAppDispatch } from '../app/store/hooks';
-import { startSession } from '../shared/auth/auth-session';
+import { Box, Button, Paper, Stack, Typography } from '@mui/material';
+import { useEffect } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAppSelector } from '../app/store/hooks';
+import { keycloak } from '../shared/auth/keycloak';
 
 export function LoginPage() {
-    const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const { isAuthenticated, isBootstrapped } = useAppSelector(
+        (state) => state.auth
+    );
 
-    const [token, setToken] = useState('');
-    const [error, setError] = useState<string | null>(null);
-
-    const handleLogin = () => {
-        if (!token.trim()) {
-            setError('Please enter an access token.');
-            return;
+    useEffect(() => {
+        if (isBootstrapped && isAuthenticated) {
+            navigate('/admin/dashboard', { replace: true });
         }
+    }, [isAuthenticated, isBootstrapped, navigate]);
 
-        setError(null);
+    if (isBootstrapped && isAuthenticated) {
+        return <Navigate to="/admin/dashboard" replace />;
+    }
 
-        startSession(dispatch, {
-            accessToken: token.trim(),
-            user: {
-                subject: 'bootstrap-pending',
-                email: null,
-                displayName: 'Loading profile...',
-                roles: [],
-            },
+    const handleLogin = async () => {
+        await keycloak.login({
+            redirectUri: `${window.location.origin}/admin/dashboard`,
         });
-
-        navigate('/admin/dashboard', { replace: true });
     };
 
     return (
@@ -80,33 +66,18 @@ export function LoginPage() {
                         <Box>
                             <Typography variant="h4">Sign in</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Temporary development sign-in. Paste a valid bearer token to access the UniGate admin panel.
+                                Sign in with Keycloak to access the UniGate administration panel.
                             </Typography>
                         </Box>
                     </Stack>
-
-                    <Alert severity="info">
-                        This is a temporary auth screen. The app will validate the token against <strong>/api/me</strong>.
-                    </Alert>
-
-                    {error ? <Alert severity="error">{error}</Alert> : null}
-
-                    <TextField
-                        label="Access token"
-                        value={token}
-                        onChange={(event) => setToken(event.target.value)}
-                        fullWidth
-                        multiline
-                        minRows={4}
-                    />
 
                     <Button
                         variant="contained"
                         size="large"
                         startIcon={<LoginOutlinedIcon />}
-                        onClick={handleLogin}
+                        onClick={() => void handleLogin()}
                     >
-                        Continue
+                        Continue with Keycloak
                     </Button>
                 </Stack>
             </Paper>

@@ -1,23 +1,13 @@
 import type { AppDispatch } from '../../app/store';
-import type { AuthUser } from '../../app/store/auth.slice';
-import { clearSession, setSession } from '../../app/store/auth.slice';
-import {
-    clearAccessToken,
-    setAccessToken,
-} from './token-storage';
+import { clearSession } from '../../app/store/auth.slice';
+import { clearAccessToken } from './token-storage';
+import { keycloak } from './keycloak';
 
-export function startSession(
-    dispatch: AppDispatch,
-    payload: {
-        accessToken: string;
-        user: AuthUser;
-    }
-) {
-    setAccessToken(payload.accessToken);
-    dispatch(setSession(payload));
-}
-
-export function endSession(dispatch: AppDispatch) {
+export async function endSession(dispatch: AppDispatch) {
     clearAccessToken();
     dispatch(clearSession());
+
+    await keycloak.logout({
+        redirectUri: `${window.location.origin}/login`,
+    });
 }

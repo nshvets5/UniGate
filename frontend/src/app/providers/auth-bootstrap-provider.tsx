@@ -1,38 +1,70 @@
-import { useQuery } from '@tanstack/react-query';
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { getCurrentUser } from '../../entities/me/api';
-import { clearSession, setUser } from '../store/auth.slice';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { clearAccessToken } from '../../shared/auth/token-storage';
+import { keycloak } from '../../shared/auth/keycloak';
+import {
+    clearSession,
+    setBootstrapped,
+    setSession,
+} from '../store/auth.slice';
+import { useAppDispatch } from '../store/hooks';
 
 export function AuthBootstrapProvider({ children }: { children: ReactNode }) {
     const dispatch = useAppDispatch();
-    const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-
-    const meQuery = useQuery({
-        queryKey: ['auth', 'me'],
-        queryFn: getCurrentUser,
-        enabled: isAuthenticated,
-        retry: false,
-        refetchOnWindowFocus: false,
-    });
+    const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
-        if (!isAuthenticated) return;
+        let cancelled = false;
 
-        if (meQuery.isSuccess) {
-            dispatch(setUser(meQuery.data));
+        async function bootstrap() {
+            try {
+                const authenticated = await keycloak.init({
+                    onLoad: 'check-sso',
+                    pkceMethod: 'S256',
+                    checkLoginIframe: false,
+                });
+
+                if (!authenticated || !keycloak.token) {
+                    dispatch(clearSession());
+                    dispatch(setBootstrapped(true));
+                    if (!cancelled) setIsReady(true);
+                    return;
+                }
+
+                const me = await getCurrentUser(keycloak.token);
+
+                dispatch(
+                    setSession({
+                        accessToken: keycloak.token,
+                        user: {
+                            subject: me.subject,
+                            email: me.email,
+                            displayName: me.displayName,
+                            roles: me.roles,
+                        },
+                    })
+                );
+
+                dispatch(setBootstrapped(true));
+            } catch {
+                dispatch(clearSession());
+                dispatch(setBootstrapped(true));
+            } finally {
+                if (!cancelled) {
+                    setIsReady(true);
+                }
+            }
         }
-    }, [dispatch, isAuthenticated, meQuery.isSuccess, meQuery.data]);
 
-    useEffect(() => {
-        if (!isAuthenticated) return;
+        void bootstrap();
 
-        if (meQuery.isError) {
-            clearAccessToken();
-            dispatch(clearSession());
-        }
-    }, [dispatch, isAuthenticated, meQuery.isError]);
+        return () => {
+            cancelled = true;
+        };
+    }, [dispatch]);
+
+    if (!isReady) {
+        return null;
+    }
 
     return <>{children}</>;
 }
