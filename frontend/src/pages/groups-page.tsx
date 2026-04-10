@@ -1,16 +1,27 @@
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
+import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import {
     Box,
     Button,
+    CircularProgress,
     Divider,
+    IconButton,
     Stack,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { GroupDto } from '../entities/group/types';
 import { CreateGroupDialog } from '../features/groups/create-group/create-group-dialog';
 import { useGroupsQuery } from '../features/groups/list-groups/use-groups-query';
+import { useToggleGroupActiveMutation } from '../features/groups/toggle-group-active/use-toggle-group-active-mutation';
+import { UpdateGroupDialog } from '../features/groups/update-group/update-group-dialog';
 import { EmptyState } from '../shared/ui/empty-state';
+import { EntityRow } from '../shared/ui/entity-row';
+import { EntityTable, EntityTableHeaderCell } from '../shared/ui/entity-table';
 import { EntityToolbar } from '../shared/ui/entity-toolbar';
 import { ErrorState } from '../shared/ui/error-state';
 import { LoadingState } from '../shared/ui/loading-state';
@@ -23,6 +34,7 @@ export function GroupsPage() {
     const { t } = useTranslation();
     const [search, setSearch] = useState('');
     const [createOpen, setCreateOpen] = useState(false);
+    const [editingGroup, setEditingGroup] = useState<GroupDto | null>(null);
 
     const queryParams = useMemo(
         () => ({
@@ -34,6 +46,14 @@ export function GroupsPage() {
     );
 
     const groupsQuery = useGroupsQuery(queryParams);
+    const toggleMutation = useToggleGroupActiveMutation();
+
+    const handleToggleActive = async (group: GroupDto) => {
+        await toggleMutation.mutateAsync({
+            id: group.id,
+            isActive: !group.isActive,
+        });
+    };
 
     return (
         <PageContainer>
@@ -89,43 +109,116 @@ export function GroupsPage() {
                             }
                         />
                     ) : (
-                        <Stack spacing={0}>
-                            <Box sx={{ px: 3, py: 2 }}>
+                        <Stack spacing={0} sx={{ p: 2 }}>
+                            <Box sx={{ px: 1, pb: 2 }}>
                                 <Typography variant="body2" color="text.secondary">
                                     Total records: {groupsQuery.data.totalCount}
                                 </Typography>
                             </Box>
 
-                            <Divider />
+                            <EntityTable
+                                columns={
+                                    <>
+                                        <EntityTableHeaderCell>Name</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell>Code</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell>Status</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="right">
+                                            Actions
+                                        </EntityTableHeaderCell>
+                                    </>
+                                }
+                            >
+                                {groupsQuery.data.items.map((group) => {
+                                    const isTogglingCurrent =
+                                        toggleMutation.isPending &&
+                                        toggleMutation.variables?.id === group.id;
 
-                            <Stack divider={<Divider />}>
-                                {groupsQuery.data.items.map((group) => (
-                                    <Box
-                                        key={group.id}
-                                        sx={{
-                                            px: 3,
-                                            py: 2.25,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            gap: 2,
-                                            flexWrap: 'wrap',
-                                        }}
-                                    >
-                                        <Stack spacing={0.5}>
-                                            <Typography variant="subtitle1">{group.name}</Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {group.code} · Admission year: {group.admissionYear}
-                                            </Typography>
-                                        </Stack>
+                                    return (
+                                        <EntityRow key={group.id}>
+                                            <Box
+                                                sx={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: {
+                                                        xs: '1fr',
+                                                        md: 'minmax(280px, 2fr) 160px 140px 140px',
+                                                    },
+                                                    alignItems: 'center',
+                                                    columnGap: 2,
+                                                    rowGap: 1.5,
+                                                }}
+                                            >
+                                                <Stack spacing={0.35} minWidth={0}>
+                                                    <Typography variant="subtitle1" noWrap>
+                                                        {group.name}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Admission year: {group.admissionYear}
+                                                    </Typography>
+                                                </Stack>
 
-                                        <StatusChip
-                                            label={group.isActive ? 'Active' : 'Inactive'}
-                                            variant={group.isActive ? 'success' : 'warning'}
-                                        />
-                                    </Box>
-                                ))}
-                            </Stack>
+                                                <Box>
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        sx={{ display: { xs: 'inline', md: 'none' }, mr: 0.75 }}
+                                                    >
+                                                        Code:
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {group.code}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Box>
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        sx={{ display: { xs: 'inline', md: 'none' }, mr: 0.75 }}
+                                                    >
+                                                        Status:
+                                                    </Typography>
+                                                    <StatusChip
+                                                        label={group.isActive ? 'Active' : 'Inactive'}
+                                                        variant={group.isActive ? 'success' : 'warning'}
+                                                    />
+                                                </Box>
+
+                                                <Stack
+                                                    direction="row"
+                                                    spacing={0.5}
+                                                    justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
+                                                    alignItems="center"
+                                                >
+                                                    <Tooltip title="Edit group">
+                                                        <IconButton onClick={() => setEditingGroup(group)}>
+                                                            <EditOutlinedIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+
+                                                    <Tooltip
+                                                        title={group.isActive ? 'Deactivate group' : 'Activate group'}
+                                                    >
+                            <span>
+                              <IconButton
+                                  onClick={() => void handleToggleActive(group)}
+                                  disabled={isTogglingCurrent}
+                              >
+                                {isTogglingCurrent ? (
+                                    <CircularProgress size={18} />
+                                ) : group.isActive ? (
+                                    <PauseCircleOutlineOutlinedIcon />
+                                ) : (
+                                    <PlayCircleOutlineOutlinedIcon />
+                                )}
+                              </IconButton>
+                            </span>
+                                                    </Tooltip>
+                                                </Stack>
+                                            </Box>
+                                        </EntityRow>
+                                    );
+                                })}
+                            </EntityTable>
                         </Stack>
                     )}
                 </Stack>
@@ -134,6 +227,12 @@ export function GroupsPage() {
             <CreateGroupDialog
                 open={createOpen}
                 onClose={() => setCreateOpen(false)}
+            />
+
+            <UpdateGroupDialog
+                open={Boolean(editingGroup)}
+                group={editingGroup}
+                onClose={() => setEditingGroup(null)}
             />
         </PageContainer>
     );

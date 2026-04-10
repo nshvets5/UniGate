@@ -19,3 +19,14 @@ export type CreateGroupRequest = {
     name: string;
     admissionYear: number;
 };
+
+export type UpdateGroupRequest = {
+    id: string;
+    code: string;
+    name: string;
+    admissionYear: number;
+};
+
+export type SetGroupActiveRequest = {
+    isActive: boolean;
+};
