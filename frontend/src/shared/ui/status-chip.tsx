@@ -1,4 +1,5 @@
 import { Chip } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 
 type StatusVariant = 'success' | 'warning' | 'error' | 'info' | 'default';
 
@@ -8,32 +9,39 @@ type StatusChipProps = {
 };
 
 export function StatusChip({ label, variant = 'default' }: StatusChipProps) {
+    const theme = useTheme();
+
     const getStyles = () => {
         switch (variant) {
             case 'success':
                 return {
-                    bgcolor: 'success.main',
-                    color: 'success.contrastText',
+                    bgcolor: alpha(theme.palette.success.main, 0.14),
+                    color: theme.palette.success.main,
+                    borderColor: alpha(theme.palette.success.main, 0.24),
                 };
             case 'warning':
                 return {
-                    bgcolor: 'warning.main',
-                    color: 'warning.contrastText',
+                    bgcolor: alpha(theme.palette.warning.main, 0.16),
+                    color: theme.palette.warning.main,
+                    borderColor: alpha(theme.palette.warning.main, 0.24),
                 };
             case 'error':
                 return {
-                    bgcolor: 'error.main',
-                    color: 'error.contrastText',
+                    bgcolor: alpha(theme.palette.error.main, 0.14),
+                    color: theme.palette.error.main,
+                    borderColor: alpha(theme.palette.error.main, 0.24),
                 };
             case 'info':
                 return {
-                    bgcolor: 'info.main',
-                    color: 'info.contrastText',
+                    bgcolor: alpha(theme.palette.info.main, 0.14),
+                    color: theme.palette.info.main,
+                    borderColor: alpha(theme.palette.info.main, 0.24),
                 };
             default:
                 return {
-                    bgcolor: 'action.selected',
-                    color: 'text.primary',
+                    bgcolor: alpha(theme.palette.text.primary, 0.06),
+                    color: theme.palette.text.primary,
+                    borderColor: alpha(theme.palette.text.primary, 0.08),
                 };
         }
     };
@@ -42,10 +50,15 @@ export function StatusChip({ label, variant = 'default' }: StatusChipProps) {
         <Chip
             label={label}
             size="small"
+            variant="outlined"
             sx={{
                 fontWeight: 700,
                 borderRadius: 999,
+                height: 30,
                 ...getStyles(),
+                '& .MuiChip-label': {
+                    px: 1.5,
+                },
             }}
         />
     );

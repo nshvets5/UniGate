@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { ReactNode } from 'react';
 
 type EntityTableProps = {
@@ -8,12 +8,13 @@ type EntityTableProps = {
 
 export function EntityTable({ columns, children }: EntityTableProps) {
     return (
-        <Stack spacing={1.5}>
+        <Box>
             <Box
                 sx={{
-                    px: 2,
+                    px: 2.25,
+                    mb: 1.25,
                     display: { xs: 'none', md: 'grid' },
-                    gridTemplateColumns: 'minmax(280px, 2fr) 160px 140px 140px',
+                    gridTemplateColumns: 'minmax(280px, 2fr) 170px 150px 150px',
                     alignItems: 'center',
                     columnGap: 2,
                 }}
@@ -21,8 +22,10 @@ export function EntityTable({ columns, children }: EntityTableProps) {
                 {columns}
             </Box>
 
-            <Stack spacing={1.25}>{children}</Stack>
-        </Stack>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                {children}
+            </Box>
+        </Box>
     );
 }
 
@@ -44,6 +47,7 @@ export function EntityTableHeaderCell({
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
                 textAlign: align,
+                pl: align === 'left' ? 0.5 : 0,
             }}
         >
             {children}
