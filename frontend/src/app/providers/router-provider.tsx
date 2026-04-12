@@ -5,6 +5,7 @@ import { DashboardPage } from '../../pages/dashboard-page';
 import { GroupsPage } from '../../pages/groups-page';
 import { StudentsPage } from '../../pages/students-page';
 import { StudentDetailsPage } from '../../pages/student-details-page';
+import { ZonesPage } from '../../pages/zones-page';
 import { LoginPage } from '../../pages/login-page';
 
 export function RouterProviderWrapper() {
@@ -24,6 +25,8 @@ export function RouterProviderWrapper() {
                             <Route index element={<StudentsPage />} />
                             <Route path=":id" element={<StudentDetailsPage />} />
                         </Route>
+
+                        <Route path="zones" element={<ZonesPage />} />
                     </Route>
                 </Route>
 

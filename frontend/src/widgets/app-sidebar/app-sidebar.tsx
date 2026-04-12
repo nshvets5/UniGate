@@ -1,5 +1,6 @@
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import {
     Box,
@@ -31,6 +32,11 @@ const navItems = [
         labelKey: 'navigation.students',
         to: '/admin/students',
         icon: <SchoolOutlinedIcon />,
+    },
+    {
+        labelKey: 'navigation.zones',
+        to: '/admin/zones',
+        icon: <LayersOutlinedIcon />,
     },
 ];
 
