@@ -15,6 +15,7 @@ import { CodeBadge } from '../../shared/ui/code-badge';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
 import { ZoneSummaryCards } from './zone-summary-cards';
+import { ZoneDoorsSection } from './zone-doors-section';
 
 type ZoneDetailsPanelProps = {
     zone: ZoneDto | null;
@@ -145,6 +146,8 @@ export function ZoneDetailsPanel({
                     </Typography>
                 </Stack>
             </SectionCard>
+
+            <ZoneDoorsSection zone={zone} />
         </Stack>
     );
 }

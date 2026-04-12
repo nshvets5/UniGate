@@ -13,4 +13,8 @@ export const queryKeys = {
         all: ['zones'] as const,
         list: (params: unknown) => ['zones', 'list', params] as const,
     },
+    doors: {
+        all: ['doors'] as const,
+        list: (params: unknown) => ['doors', 'list', params] as const,
+    },
 };
