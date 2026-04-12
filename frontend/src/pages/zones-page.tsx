@@ -1,56 +1,51 @@
-import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
-import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
-import {
-    Box,
-    Button,
-    CircularProgress,
-    Divider,
-    IconButton,
-    Stack,
-    Tooltip,
-    Typography,
-} from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
-import { useMemo, useState } from 'react';
+import { Grid } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
+import type { ZoneDto } from '../entities/zone/types';
 import { useZonesQuery } from '../features/zones/list-zones/use-zones-query';
 import { CreateZoneDialog } from '../features/zones/create-zone/create-zone-dialog';
 import { useToggleZoneActiveMutation } from '../features/zones/toggle-zone-active/use-toggle-zone-active-mutation';
 import { UpdateZoneDialog } from '../features/zones/update-zone/update-zone-dialog';
-import type { ZoneDto } from '../entities/zone/types';
-import { CodeBadge } from '../shared/ui/code-badge';
-import { EmptyState } from '../shared/ui/empty-state';
-import { EntityRow } from '../shared/ui/entity-row';
-import { EntityTable, EntityTableHeaderCell } from '../shared/ui/entity-table';
-import { EntityToolbar } from '../shared/ui/entity-toolbar';
-import { ErrorState } from '../shared/ui/error-state';
-import { LoadingState } from '../shared/ui/loading-state';
 import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
-import { RowActions } from '../shared/ui/row-actions';
-import { SectionCard } from '../shared/ui/section-card';
-import { StatusChip } from '../shared/ui/status-chip';
+import { ErrorState } from '../shared/ui/error-state';
+import { ZoneDetailsPanel } from '../widgets/zones/zone-details-panel';
+import { ZoneListPanel } from '../widgets/zones/zone-list-panel';
 
 export function ZonesPage() {
-    const theme = useTheme();
     const [search, setSearch] = useState('');
     const [createOpen, setCreateOpen] = useState(false);
     const [editingZone, setEditingZone] = useState<ZoneDto | null>(null);
-
-    const desktopColumns = 'minmax(280px, 2fr) 170px 150px 150px';
+    const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
     const queryParams = useMemo(
         () => ({
             search: search || undefined,
             page: 1,
-            pageSize: 20,
+            pageSize: 50,
         }),
         [search]
     );
 
     const zonesQuery = useZonesQuery(queryParams);
     const toggleMutation = useToggleZoneActiveMutation();
+
+    const zones = zonesQuery.data?.items ?? [];
+
+    useEffect(() => {
+        if (zones.length === 0) {
+            setSelectedZoneId(null);
+            return;
+        }
+
+        const selectedStillExists = zones.some((zone) => zone.id === selectedZoneId);
+
+        if (!selectedZoneId || !selectedStillExists) {
+            setSelectedZoneId(zones[0].id);
+        }
+    }, [zones, selectedZoneId]);
+
+    const selectedZone =
+        zones.find((zone) => zone.id === selectedZoneId) ?? null;
 
     const handleToggleActive = async (zone: ZoneDto) => {
         await toggleMutation.mutateAsync({
@@ -59,179 +54,54 @@ export function ZonesPage() {
         });
     };
 
+    if (zonesQuery.isError) {
+        return (
+            <PageContainer>
+                <PageHeader
+                    title="Zones"
+                    subtitle="Manage physical access zones and workspace structure."
+                />
+                <ErrorState
+                    title="Failed to load zones"
+                    description="The zones workspace could not be loaded from the server."
+                    onRetry={() => void zonesQuery.refetch()}
+                />
+            </PageContainer>
+        );
+    }
+
     return (
         <PageContainer>
             <PageHeader
                 title="Zones"
-                subtitle="Manage physical access zones and lifecycle state."
+                subtitle="Workspace for physical access zones, spatial structure and infrastructure context."
             />
 
-            <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-                <Stack spacing={0}>
-                    <Stack sx={{ p: 3 }}>
-                        <EntityToolbar
-                            searchValue={search}
-                            onSearchChange={setSearch}
-                            searchPlaceholder="Search zones by code or name..."
-                            primaryAction={
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddOutlinedIcon />}
-                                    onClick={() => setCreateOpen(true)}
-                                >
-                                    Create zone
-                                </Button>
-                            }
-                        />
-                    </Stack>
+            <Grid container spacing={3}>
+                <Grid size={{ xs: 12, xl: 4 }}>
+                    <ZoneListPanel
+                        zones={zones}
+                        selectedZoneId={selectedZoneId}
+                        search={search}
+                        onSearchChange={setSearch}
+                        onCreateClick={() => setCreateOpen(true)}
+                        onSelectZone={(zone) => setSelectedZoneId(zone.id)}
+                        isLoading={zonesQuery.isLoading}
+                    />
+                </Grid>
 
-                    <Divider />
-
-                    {zonesQuery.isLoading ? (
-                        <LoadingState
-                            title="Loading zones"
-                            description="Please wait while access zones are being loaded."
-                        />
-                    ) : zonesQuery.isError ? (
-                        <ErrorState
-                            title="Failed to load zones"
-                            description="The zones list could not be loaded from the server."
-                            onRetry={() => void zonesQuery.refetch()}
-                        />
-                    ) : !zonesQuery.data || zonesQuery.data.items.length === 0 ? (
-                        <EmptyState
-                            title="No zones found"
-                            description="Create the first zone to start structuring the access domain."
-                            action={
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddOutlinedIcon />}
-                                    onClick={() => setCreateOpen(true)}
-                                >
-                                    Create first zone
-                                </Button>
-                            }
-                        />
-                    ) : (
-                        <Stack spacing={0} sx={{ p: 2.25 }}>
-                            <Box sx={{ px: 1, pb: 2 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    Total records: {zonesQuery.data.totalCount}
-                                </Typography>
-                            </Box>
-
-                            <EntityTable
-                                gridTemplateColumns={desktopColumns}
-                                columns={
-                                    <>
-                                        <EntityTableHeaderCell>Name</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="center">Code</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="center">Status</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="right">Actions</EntityTableHeaderCell>
-                                    </>
-                                }
-                            >
-                                {zonesQuery.data.items.map((zone) => {
-                                    const isTogglingCurrent =
-                                        toggleMutation.isPending &&
-                                        toggleMutation.variables?.id === zone.id;
-
-                                    const accentColor = zone.isActive
-                                        ? theme.palette.success.main
-                                        : theme.palette.warning.main;
-
-                                    return (
-                                        <EntityRow key={zone.id} accentColor={accentColor}>
-                                            <Box
-                                                sx={{
-                                                    display: 'grid',
-                                                    gridTemplateColumns: {
-                                                        xs: '1fr',
-                                                        md: desktopColumns,
-                                                    },
-                                                    alignItems: 'center',
-                                                    columnGap: 2,
-                                                    rowGap: 1.5,
-                                                    pl: { xs: 0, md: 1.25 },
-                                                }}
-                                            >
-                                                <Stack spacing={0.45} minWidth={0}>
-                                                    <Typography variant="subtitle1" noWrap>
-                                                        {zone.name}
-                                                    </Typography>
-
-                                                    <Typography variant="body2" color="text.secondary" noWrap>
-                                                        {zone.description || 'No description provided'}
-                                                    </Typography>
-                                                </Stack>
-
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: { xs: 'flex-start', md: 'center' },
-                                                        minHeight: 40,
-                                                    }}
-                                                >
-                                                    <CodeBadge value={zone.code} />
-                                                </Box>
-
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: { xs: 'flex-start', md: 'center' },
-                                                        minHeight: 40,
-                                                    }}
-                                                >
-                                                    <StatusChip
-                                                        label={zone.isActive ? 'Active' : 'Inactive'}
-                                                        variant={zone.isActive ? 'success' : 'warning'}
-                                                    />
-                                                </Box>
-
-                                                <Stack
-                                                    direction="row"
-                                                    spacing={0.5}
-                                                    justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
-                                                    alignItems="center"
-                                                >
-                                                    <RowActions>
-                                                        <Tooltip title="Edit zone">
-                                                            <IconButton onClick={() => setEditingZone(zone)}>
-                                                                <EditOutlinedIcon />
-                                                            </IconButton>
-                                                        </Tooltip>
-
-                                                        <Tooltip
-                                                            title={zone.isActive ? 'Deactivate zone' : 'Activate zone'}
-                                                        >
-                              <span>
-                                <IconButton
-                                    onClick={() => void handleToggleActive(zone)}
-                                    disabled={isTogglingCurrent}
-                                >
-                                  {isTogglingCurrent ? (
-                                      <CircularProgress size={18} />
-                                  ) : zone.isActive ? (
-                                      <PauseCircleOutlineOutlinedIcon />
-                                  ) : (
-                                      <PlayCircleOutlineOutlinedIcon />
-                                  )}
-                                </IconButton>
-                              </span>
-                                                        </Tooltip>
-                                                    </RowActions>
-                                                </Stack>
-                                            </Box>
-                                        </EntityRow>
-                                    );
-                                })}
-                            </EntityTable>
-                        </Stack>
-                    )}
-                </Stack>
-            </SectionCard>
+                <Grid size={{ xs: 12, xl: 8 }}>
+                    <ZoneDetailsPanel
+                        zone={selectedZone}
+                        onEdit={(zone) => setEditingZone(zone)}
+                        onToggleActive={(zone) => void handleToggleActive(zone)}
+                        isTogglePending={
+                            toggleMutation.isPending &&
+                            toggleMutation.variables?.id === selectedZone?.id
+                        }
+                    />
+                </Grid>
+            </Grid>
 
             <CreateZoneDialog
                 open={createOpen}
