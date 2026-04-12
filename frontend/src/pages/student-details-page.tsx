@@ -30,9 +30,12 @@ import { PageHeader } from '../shared/ui/page-header';
 import { RowActions } from '../shared/ui/row-actions';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
+import { useNavigate } from 'react-router-dom';
 
 export function StudentDetailsPage() {
     const theme = useTheme();
+    const navigate = useNavigate();
     const { id = '' } = useParams();
     const [createCredentialOpen, setCreateCredentialOpen] = useState(false);
 
@@ -88,13 +91,23 @@ export function StudentDetailsPage() {
                 title={fullName}
                 subtitle="Student profile, group assignment and access credentials."
                 actions={
-                    <Button
-                        variant="contained"
-                        startIcon={<AddOutlinedIcon />}
-                        onClick={() => setCreateCredentialOpen(true)}
-                    >
-                        Add credential
-                    </Button>
+                    <Stack direction="row" spacing={1}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<ArrowBackOutlinedIcon />}
+                            onClick={() => navigate('/admin/students')}
+                        >
+                            Back
+                        </Button>
+
+                        <Button
+                            variant="contained"
+                            startIcon={<AddOutlinedIcon />}
+                            onClick={() => setCreateCredentialOpen(true)}
+                        >
+                            Add credential
+                        </Button>
+                    </Stack>
                 }
             />
 
