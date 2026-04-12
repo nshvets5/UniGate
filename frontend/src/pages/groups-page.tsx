@@ -40,6 +40,8 @@ export function GroupsPage() {
     const [createOpen, setCreateOpen] = useState(false);
     const [editingGroup, setEditingGroup] = useState<GroupDto | null>(null);
 
+    const desktopColumns = 'minmax(280px, 2fr) 170px 150px 150px';
+
     const queryParams = useMemo(
         () => ({
             search: search || undefined,
@@ -128,18 +130,16 @@ export function GroupsPage() {
                                 <Typography variant="body2" color="text.secondary">
                                     Total records: {groupsQuery.data.totalCount}
                                 </Typography>
-
                             </Box>
 
                             <EntityTable
+                                gridTemplateColumns={desktopColumns}
                                 columns={
                                     <>
                                         <EntityTableHeaderCell>Name</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell>Code</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell>Status</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="right">
-                                            Actions
-                                        </EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">Code</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">Status</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="right">Actions</EntityTableHeaderCell>
                                     </>
                                 }
                             >
@@ -153,16 +153,13 @@ export function GroupsPage() {
                                         : theme.palette.warning.main;
 
                                     return (
-                                        <EntityRow
-                                            key={group.id}
-                                            accentColor={accentColor}
-                                        >
+                                        <EntityRow key={group.id} accentColor={accentColor}>
                                             <Box
                                                 sx={{
                                                     display: 'grid',
                                                     gridTemplateColumns: {
                                                         xs: '1fr',
-                                                        md: 'minmax(280px, 2fr) 170px 150px 150px',
+                                                        md: desktopColumns,
                                                     },
                                                     alignItems: 'center',
                                                     columnGap: 2,
@@ -201,7 +198,14 @@ export function GroupsPage() {
                                                     </Stack>
                                                 </Stack>
 
-                                                <Box>
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: { xs: 'flex-start', md: 'center' },
+                                                        minHeight: 40,
+                                                    }}
+                                                >
                                                     <Typography
                                                         variant="body2"
                                                         color="text.secondary"
@@ -209,10 +213,18 @@ export function GroupsPage() {
                                                     >
                                                         Code:
                                                     </Typography>
+
                                                     <CodeBadge value={group.code} />
                                                 </Box>
 
-                                                <Box>
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: { xs: 'flex-start', md: 'center' },
+                                                        minHeight: 40,
+                                                    }}
+                                                >
                                                     <Typography
                                                         variant="body2"
                                                         color="text.secondary"
@@ -220,6 +232,7 @@ export function GroupsPage() {
                                                     >
                                                         Status:
                                                     </Typography>
+
                                                     <StatusChip
                                                         label={group.isActive ? 'Active' : 'Inactive'}
                                                         variant={group.isActive ? 'success' : 'warning'}

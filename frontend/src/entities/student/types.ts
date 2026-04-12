@@ -25,3 +25,19 @@ export type CreateStudentRequest = {
     middleName?: string | null;
     email: string;
 };
+
+export type UpdateStudentRequest = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    middleName?: string | null;
+    email: string;
+};
+
+export type SetStudentActiveRequest = {
+    isActive: boolean;
+};
+
+export type ChangeStudentGroupRequest = {
+    groupId: string;
+};

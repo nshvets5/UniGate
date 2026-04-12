@@ -1,17 +1,29 @@
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
+import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
+import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import {
     Box,
     Button,
+    CircularProgress,
     Divider,
+    IconButton,
     Stack,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { GroupDto } from '../entities/group/types';
+import type { StudentDto } from '../entities/student/types';
 import { useGroupsQuery } from '../features/groups/list-groups/use-groups-query';
 import { CreateStudentDialog } from '../features/students/create-student/create-student-dialog';
+import { ChangeStudentGroupDialog } from '../features/students/change-student-group/change-student-group-dialog';
 import { useStudentsQuery } from '../features/students/list-students/use-students-query';
+import { useToggleStudentActiveMutation } from '../features/students/toggle-student-active/use-toggle-student-active-mutation';
+import { UpdateStudentDialog } from '../features/students/update-student/update-student-dialog';
 import { CodeBadge } from '../shared/ui/code-badge';
 import { EmptyState } from '../shared/ui/empty-state';
 import { EntityRow } from '../shared/ui/entity-row';
@@ -21,14 +33,18 @@ import { ErrorState } from '../shared/ui/error-state';
 import { LoadingState } from '../shared/ui/loading-state';
 import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
+import { RowActions } from '../shared/ui/row-actions';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
 
 export function StudentsPage() {
     const { t } = useTranslation();
     const theme = useTheme();
+    const desktopColumns = 'minmax(280px, 2fr) 180px 140px 180px';
     const [search, setSearch] = useState('');
     const [createOpen, setCreateOpen] = useState(false);
+    const [editingStudent, setEditingStudent] = useState<StudentDto | null>(null);
+    const [groupChangingStudent, setGroupChangingStudent] = useState<StudentDto | null>(null);
 
     const studentQueryParams = useMemo(
         () => ({
@@ -44,19 +60,24 @@ export function StudentsPage() {
         page: 1,
         pageSize: 100,
     });
+    const toggleMutation = useToggleStudentActiveMutation();
 
     const groupMap = useMemo(() => {
-        const map = new Map<string, { code: string; name: string }>();
+        const map = new Map<string, GroupDto>();
 
         for (const group of groupsQuery.data?.items ?? []) {
-            map.set(group.id, {
-                code: group.code,
-                name: group.name,
-            });
+            map.set(group.id, group);
         }
 
         return map;
     }, [groupsQuery.data]);
+
+    const handleToggleActive = async (student: StudentDto) => {
+        await toggleMutation.mutateAsync({
+            id: student.id,
+            isActive: !student.isActive,
+        });
+    };
 
     return (
         <PageContainer>
@@ -129,20 +150,17 @@ export function StudentsPage() {
                                 <Typography variant="body2" color="text.secondary">
                                     Total records: {studentsQuery.data.totalCount}
                                 </Typography>
-
-                                <Typography variant="body2" color="text.secondary">
-                                    Authorized student directory view
-                                </Typography>
                             </Box>
 
                             <EntityTable
+                                gridTemplateColumns={desktopColumns}
                                 columns={
                                     <>
                                         <EntityTableHeaderCell>Student</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell>Group</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell>Status</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">Group</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">Status</EntityTableHeaderCell>
                                         <EntityTableHeaderCell align="right">
-                                            Email
+                                            Actions
                                         </EntityTableHeaderCell>
                                     </>
                                 }
@@ -162,6 +180,10 @@ export function StudentsPage() {
                                         ? theme.palette.success.main
                                         : theme.palette.warning.main;
 
+                                    const isTogglingCurrent =
+                                        toggleMutation.isPending &&
+                                        toggleMutation.variables?.id === student.id;
+
                                     return (
                                         <EntityRow key={student.id} accentColor={accentColor}>
                                             <Box
@@ -169,7 +191,7 @@ export function StudentsPage() {
                                                     display: 'grid',
                                                     gridTemplateColumns: {
                                                         xs: '1fr',
-                                                        md: 'minmax(280px, 2fr) 180px 140px 240px',
+                                                        md: desktopColumns,
                                                     },
                                                     alignItems: 'center',
                                                     columnGap: 2,
@@ -190,7 +212,7 @@ export function StudentsPage() {
                                                         useFlexGap
                                                     >
                                                         <Typography variant="body2" color="text.secondary">
-                                                            Created {new Date(student.createdAt).toLocaleDateString()}
+                                                            {student.email}
                                                         </Typography>
 
                                                         {student.iamProfileId ? (
@@ -215,9 +237,10 @@ export function StudentsPage() {
                                                     sx={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent: { xs: 'flex-start', md: 'flex-start' },
+                                                        justifyContent: { xs: 'flex-start', md: 'center' },
                                                         gap: 1,
                                                         flexWrap: 'wrap',
+                                                        minHeight: 40,
                                                     }}
                                                 >
                                                     <Typography
@@ -229,9 +252,7 @@ export function StudentsPage() {
                                                     </Typography>
 
                                                     {group ? (
-                                                        <Stack direction="row" spacing={1} alignItems="center">
-                                                            <CodeBadge value={group.code} />
-                                                        </Stack>
+                                                        <CodeBadge value={group.code} />
                                                     ) : (
                                                         <Typography variant="body2" color="text.secondary">
                                                             Unknown group
@@ -243,7 +264,8 @@ export function StudentsPage() {
                                                     sx={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent: { xs: 'flex-start', md: 'flex-start' },
+                                                        justifyContent: { xs: 'flex-start', md: 'center' },
+                                                        minHeight: 40,
                                                     }}
                                                 >
                                                     <Typography
@@ -253,6 +275,7 @@ export function StudentsPage() {
                                                     >
                                                         Status:
                                                     </Typography>
+
                                                     <StatusChip
                                                         label={student.isActive ? 'Active' : 'Inactive'}
                                                         variant={student.isActive ? 'success' : 'warning'}
@@ -260,13 +283,50 @@ export function StudentsPage() {
                                                 </Box>
 
                                                 <Stack
-                                                    justifyContent={{ xs: 'flex-start', md: 'center' }}
-                                                    alignItems={{ xs: 'flex-start', md: 'flex-end' }}
-                                                    minWidth={0}
+                                                    direction="row"
+                                                    spacing={0.5}
+                                                    justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
+                                                    alignItems="center"
                                                 >
-                                                    <Typography variant="body2" noWrap>
-                                                        {student.email}
-                                                    </Typography>
+                                                    <RowActions>
+                                                        <Tooltip title="Edit student">
+                                                            <IconButton onClick={() => setEditingStudent(student)}>
+                                                                <EditOutlinedIcon />
+                                                            </IconButton>
+                                                        </Tooltip>
+
+                                                        <Tooltip title="Change student group">
+                                                            <IconButton
+                                                                onClick={() => setGroupChangingStudent(student)}
+                                                                disabled={groupsQuery.isLoading || groupsQuery.isError}
+                                                            >
+                                                                <SwapHorizOutlinedIcon />
+                                                            </IconButton>
+                                                        </Tooltip>
+
+                                                        <Tooltip
+                                                            title={
+                                                                student.isActive
+                                                                    ? 'Deactivate student'
+                                                                    : 'Activate student'
+                                                            }
+                                                        >
+                              <span>
+                                <IconButton
+                                    onClick={() => void handleToggleActive(student)}
+                                    disabled={isTogglingCurrent}
+                                >
+                                  {isTogglingCurrent ? (
+                                      <CircularProgress size={18} />
+                                  ) : student.isActive ? (
+                                      <PauseCircleOutlineOutlinedIcon />
+                                  ) : (
+                                      <PlayCircleOutlineOutlinedIcon />
+                                  )}
+                                </IconButton>
+                              </span>
+                                                        </Tooltip>
+                                                    </RowActions>
                                                 </Stack>
                                             </Box>
                                         </EntityRow>
@@ -282,6 +342,19 @@ export function StudentsPage() {
                 open={createOpen}
                 onClose={() => setCreateOpen(false)}
                 groups={groupsQuery.data?.items ?? []}
+            />
+
+            <UpdateStudentDialog
+                open={Boolean(editingStudent)}
+                student={editingStudent}
+                onClose={() => setEditingStudent(null)}
+            />
+
+            <ChangeStudentGroupDialog
+                open={Boolean(groupChangingStudent)}
+                student={groupChangingStudent}
+                groups={groupsQuery.data?.items ?? []}
+                onClose={() => setGroupChangingStudent(null)}
             />
         </PageContainer>
     );

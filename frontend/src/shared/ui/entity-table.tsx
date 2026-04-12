@@ -4,9 +4,14 @@ import { ReactNode } from 'react';
 type EntityTableProps = {
     columns: ReactNode;
     children: ReactNode;
+    gridTemplateColumns: string;
 };
 
-export function EntityTable({ columns, children }: EntityTableProps) {
+export function EntityTable({
+                                columns,
+                                children,
+                                gridTemplateColumns,
+                            }: EntityTableProps) {
     return (
         <Box>
             <Box
@@ -14,7 +19,7 @@ export function EntityTable({ columns, children }: EntityTableProps) {
                     px: 2.25,
                     mb: 1.25,
                     display: { xs: 'none', md: 'grid' },
-                    gridTemplateColumns: 'minmax(280px, 2fr) 170px 150px 150px',
+                    gridTemplateColumns,
                     alignItems: 'center',
                     columnGap: 2,
                 }}
@@ -47,7 +52,6 @@ export function EntityTableHeaderCell({
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
                 textAlign: align,
-                pl: align === 'left' ? 0.5 : 0,
             }}
         >
             {children}
