@@ -1,4 +1,6 @@
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import {
@@ -13,12 +15,13 @@ import {
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useGroupsQuery } from '../features/groups/list-groups/use-groups-query';
 import { CreateStudentCredentialDialog } from '../features/students/credentials/create-student-credential-dialog';
 import { useToggleStudentCredentialActiveMutation } from '../features/students/credentials/use-toggle-student-credential-active-mutation';
 import { useStudentCredentialsQuery } from '../features/students/student-details/use-student-credentials-query';
 import { useStudentQuery } from '../features/students/student-details/use-student-query';
+import { UpdateStudentDialog } from '../features/students/update-student/update-student-dialog';
 import { CodeBadge } from '../shared/ui/code-badge';
 import { EmptyState } from '../shared/ui/empty-state';
 import { EntityRow } from '../shared/ui/entity-row';
@@ -30,14 +33,13 @@ import { PageHeader } from '../shared/ui/page-header';
 import { RowActions } from '../shared/ui/row-actions';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
-import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
-import { useNavigate } from 'react-router-dom';
 
 export function StudentDetailsPage() {
     const theme = useTheme();
     const navigate = useNavigate();
     const { id = '' } = useParams();
     const [createCredentialOpen, setCreateCredentialOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
 
     const studentQuery = useStudentQuery(id);
     const credentialsQuery = useStudentCredentialsQuery(id);
@@ -91,13 +93,21 @@ export function StudentDetailsPage() {
                 title={fullName}
                 subtitle="Student profile, group assignment and access credentials."
                 actions={
-                    <Stack direction="row" spacing={1}>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                         <Button
                             variant="outlined"
                             startIcon={<ArrowBackOutlinedIcon />}
                             onClick={() => navigate('/admin/students')}
                         >
                             Back
+                        </Button>
+
+                        <Button
+                            variant="outlined"
+                            startIcon={<EditOutlinedIcon />}
+                            onClick={() => setEditOpen(true)}
+                        >
+                            Edit
                         </Button>
 
                         <Button
@@ -304,6 +314,12 @@ export function StudentDetailsPage() {
                 open={createCredentialOpen}
                 studentId={student.id}
                 onClose={() => setCreateCredentialOpen(false)}
+            />
+
+            <UpdateStudentDialog
+                open={editOpen}
+                student={student}
+                onClose={() => setEditOpen(false)}
             />
         </PageContainer>
     );
