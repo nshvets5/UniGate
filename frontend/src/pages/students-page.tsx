@@ -16,6 +16,7 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import type { GroupDto } from '../entities/group/types';
 import type { StudentDto } from '../entities/student/types';
 import { useGroupsQuery } from '../features/groups/list-groups/use-groups-query';
@@ -40,6 +41,8 @@ import { StatusChip } from '../shared/ui/status-chip';
 export function StudentsPage() {
     const { t } = useTranslation();
     const theme = useTheme();
+    const navigate = useNavigate();
+
     const desktopColumns = 'minmax(280px, 2fr) 180px 140px 180px';
     const [search, setSearch] = useState('');
     const [createOpen, setCreateOpen] = useState(false);
@@ -77,6 +80,10 @@ export function StudentsPage() {
             id: student.id,
             isActive: !student.isActive,
         });
+    };
+
+    const handleOpenDetails = (studentId: string) => {
+        navigate(`/admin/students/${studentId}`);
     };
 
     return (
@@ -200,9 +207,31 @@ export function StudentsPage() {
                                                 }}
                                             >
                                                 <Stack spacing={0.45} minWidth={0}>
-                                                    <Typography variant="subtitle1" noWrap>
-                                                        {fullName}
-                                                    </Typography>
+                                                    <Box
+                                                        component="button"
+                                                        type="button"
+                                                        onClick={() => handleOpenDetails(student.id)}
+                                                        sx={{
+                                                            all: 'unset',
+                                                            cursor: 'pointer',
+                                                            display: 'inline-block',
+                                                            maxWidth: '100%',
+                                                        }}
+                                                    >
+                                                        <Typography
+                                                            variant="subtitle1"
+                                                            noWrap
+                                                            sx={{
+                                                                color: 'text.primary',
+                                                                transition: 'color 0.18s ease',
+                                                                '&:hover': {
+                                                                    color: 'primary.main',
+                                                                },
+                                                            }}
+                                                        >
+                                                            {fullName}
+                                                        </Typography>
+                                                    </Box>
 
                                                     <Stack
                                                         direction="row"

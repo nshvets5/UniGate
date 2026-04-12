@@ -4,6 +4,7 @@ import { AdminLayout } from '../../layouts/admin-layout';
 import { DashboardPage } from '../../pages/dashboard-page';
 import { GroupsPage } from '../../pages/groups-page';
 import { StudentsPage } from '../../pages/students-page';
+import { StudentDetailsPage } from '../../pages/student-details-page';
 import { LoginPage } from '../../pages/login-page';
 
 export function RouterProviderWrapper() {
@@ -15,9 +16,14 @@ export function RouterProviderWrapper() {
 
                 <Route element={<RequireAuth />}>
                     <Route path="/admin" element={<AdminLayout />}>
+                        <Route index element={<Navigate to="dashboard" replace />} />
                         <Route path="dashboard" element={<DashboardPage />} />
                         <Route path="groups" element={<GroupsPage />} />
-                        <Route path="students" element={<StudentsPage />} />
+
+                        <Route path="students">
+                            <Route index element={<StudentsPage />} />
+                            <Route path=":id" element={<StudentDetailsPage />} />
+                        </Route>
                     </Route>
                 </Route>
 

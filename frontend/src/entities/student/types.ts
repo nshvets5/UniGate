@@ -41,3 +41,22 @@ export type SetStudentActiveRequest = {
 export type ChangeStudentGroupRequest = {
     groupId: string;
 };
+
+export type StudentCredentialDto = {
+    id: string;
+    studentId: string;
+    type: 'rfid' | 'qr' | 'manual';
+    value: string;
+    isActive: boolean;
+    createdAt: string;
+};
+
+export type CreateStudentCredentialRequest = {
+    studentId: string;
+    type: 'rfid' | 'qr' | 'manual';
+    value: string;
+};
+
+export type SetStudentCredentialActiveRequest = {
+    isActive: boolean;
+};

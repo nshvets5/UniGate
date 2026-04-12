@@ -1,19 +1,29 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-
-function LoginPage() {
-    return <div>Login Page Works</div>;
-}
-
-function DashboardPage() {
-    return <div>Dashboard Page Works</div>;
-}
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { RequireAuth } from '../router/require-auth';
+import { AdminLayout } from '../../layouts/admin-layout';
+import { DashboardPage } from '../../pages/dashboard-page';
+import { GroupsPage } from '../../pages/groups-page';
+import { StudentsPage } from '../../pages/students-page';
+import { StudentDetailsPage } from '../../pages/student-details-page';
+import { LoginPage } from '../../pages/login-page';
 
 export function RouterProviderWrapper() {
     return (
         <BrowserRouter>
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/" element={<DashboardPage />} />
+                <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+
+                <Route element={<RequireAuth />}>
+                    <Route path="/admin" element={<AdminLayout />}>
+                        <Route path="dashboard" element={<DashboardPage />} />
+                        <Route path="groups" element={<GroupsPage />} />
+                        <Route path="students/:id" element={<StudentDetailsPage />} />
+                        <Route path="students" element={<StudentsPage />} />
+                    </Route>
+                </Route>
+
+                <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </BrowserRouter>
     );

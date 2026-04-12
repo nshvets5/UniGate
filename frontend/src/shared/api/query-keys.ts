@@ -6,5 +6,7 @@ export const queryKeys = {
     students: {
         all: ['students'] as const,
         list: (params: unknown) => ['students', 'list', params] as const,
+        detail: (id: string) => ['students', 'detail', id] as const,
+        credentials: (id: string) => ['students', 'credentials', id] as const,
     },
 };
