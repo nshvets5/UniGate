@@ -16,6 +16,7 @@ import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
 import { ZoneSummaryCards } from './zone-summary-cards';
 import { ZoneDoorsSection } from './zone-doors-section';
+import { ZoneRulesSection } from './zone-rules-section';
 
 type ZoneDetailsPanelProps = {
     zone: ZoneDto | null;
@@ -148,6 +149,7 @@ export function ZoneDetailsPanel({
             </SectionCard>
 
             <ZoneDoorsSection zone={zone} />
+            <ZoneRulesSection zone={zone} />
         </Stack>
     );
 }

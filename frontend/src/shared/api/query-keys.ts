@@ -17,4 +17,8 @@ export const queryKeys = {
         all: ['doors'] as const,
         list: (params: unknown) => ['doors', 'list', params] as const,
     },
+    accessRules: {
+        all: ['access-rules'] as const,
+        list: (params: unknown) => ['access-rules', 'list', params] as const,
+    },
 };
