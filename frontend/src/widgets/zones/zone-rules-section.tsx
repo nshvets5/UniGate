@@ -1,7 +1,9 @@
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import {
     Box,
+    Button,
     CircularProgress,
     Divider,
     IconButton,
@@ -9,11 +11,13 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useMemo } from 'react';
-import type { ZoneDto } from '../../entities/zone/types';
+import { useMemo, useState } from 'react';
 import type { AccessRuleDto } from '../../entities/access-rule/types';
+import type { ZoneDto } from '../../entities/zone/types';
+import { CreateAccessRuleDialog } from '../../features/access-rules/create-access-rule/create-access-rule-dialog';
 import { useAccessRulesQuery } from '../../features/access-rules/list-access-rules/use-access-rules-query';
 import { useToggleAccessRuleActiveMutation } from '../../features/access-rules/toggle-access-rule-active/use-toggle-access-rule-active-mutation';
+import { useGroupsQuery } from '../../features/groups/list-groups/use-groups-query';
 import { CodeBadge } from '../../shared/ui/code-badge';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { EntityRow } from '../../shared/ui/entity-row';
@@ -43,6 +47,8 @@ function formatRulePeriod(rule: AccessRuleDto) {
 }
 
 export function ZoneRulesSection({ zone }: ZoneRulesSectionProps) {
+    const [createOpen, setCreateOpen] = useState(false);
+
     const desktopColumns = 'minmax(240px, 1.7fr) 160px 140px 140px';
 
     const queryParams = useMemo(
@@ -55,6 +61,7 @@ export function ZoneRulesSection({ zone }: ZoneRulesSectionProps) {
     );
 
     const rulesQuery = useAccessRulesQuery(queryParams);
+    const groupsQuery = useGroupsQuery({ page: 1, pageSize: 100 });
     const toggleMutation = useToggleAccessRuleActiveMutation();
 
     const handleToggleActive = async (rule: AccessRuleDto) => {
@@ -65,135 +72,197 @@ export function ZoneRulesSection({ zone }: ZoneRulesSectionProps) {
     };
 
     return (
-        <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-            <Stack spacing={0}>
-                <Box sx={{ p: 3 }}>
-                    <Typography variant="subtitle1">Access rules</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        Access policies linked to the selected zone. Rule creation requires group and schedule configuration.
-                    </Typography>
-                </Box>
+        <>
+            <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
+                <Stack spacing={0}>
+                    <Box
+                        sx={{
+                            p: 3,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 2,
+                            flexWrap: 'wrap',
+                        }}
+                    >
+                        <Stack spacing={0.5}>
+                            <Typography variant="subtitle1">Access rules</Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Access policies linked to the selected zone.
+                            </Typography>
+                        </Stack>
 
-                <Divider />
-
-                {rulesQuery.isLoading ? (
-                    <LoadingState
-                        title="Loading access rules"
-                        description="Please wait while zone rules are being loaded."
-                    />
-                ) : rulesQuery.isError ? (
-                    <ErrorState
-                        title="Failed to load access rules"
-                        description="The rules list could not be loaded from the server."
-                        onRetry={() => void rulesQuery.refetch()}
-                    />
-                ) : !rulesQuery.data || rulesQuery.data.items.length === 0 ? (
-                    <EmptyState
-                        title="No access rules found"
-                        description="No access policies are currently linked to this zone."
-                    />
-                ) : (
-                    <Stack spacing={0} sx={{ p: 2.25 }}>
-                        <EntityTable
-                            gridTemplateColumns={desktopColumns}
-                            columns={
-                                <>
-                                    <EntityTableHeaderCell>Rule</EntityTableHeaderCell>
-                                    <EntityTableHeaderCell align="center">Windows</EntityTableHeaderCell>
-                                    <EntityTableHeaderCell align="center">Status</EntityTableHeaderCell>
-                                    <EntityTableHeaderCell align="right">Actions</EntityTableHeaderCell>
-                                </>
-                            }
+                        <Button
+                            variant="contained"
+                            startIcon={<AddOutlinedIcon />}
+                            onClick={() => setCreateOpen(true)}
+                            disabled={groupsQuery.isLoading || groupsQuery.isError}
                         >
-                            {rulesQuery.data.items.map((rule) => {
-                                const isTogglingCurrent =
-                                    toggleMutation.isPending &&
-                                    toggleMutation.variables?.id === rule.id;
+                            Add rule
+                        </Button>
+                    </Box>
 
-                                return (
-                                    <EntityRow key={rule.id}>
-                                        <Box
-                                            sx={{
-                                                display: 'grid',
-                                                gridTemplateColumns: {
-                                                    xs: '1fr',
-                                                    md: desktopColumns,
-                                                },
-                                                alignItems: 'center',
-                                                columnGap: 2,
-                                                rowGap: 1.5,
-                                                pl: { xs: 0, md: 1.25 },
-                                            }}
-                                        >
-                                            <Stack spacing={0.45} minWidth={0}>
-                                                <Typography variant="subtitle1" noWrap>
-                                                    Group rule
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary" noWrap>
-                                                    {formatRulePeriod(rule)}
-                                                </Typography>
-                                            </Stack>
+                    <Divider />
 
+                    {rulesQuery.isLoading ? (
+                        <LoadingState
+                            title="Loading access rules"
+                            description="Please wait while zone rules are being loaded."
+                        />
+                    ) : rulesQuery.isError ? (
+                        <ErrorState
+                            title="Failed to load access rules"
+                            description="The rules list could not be loaded from the server."
+                            onRetry={() => void rulesQuery.refetch()}
+                        />
+                    ) : !rulesQuery.data || rulesQuery.data.items.length === 0 ? (
+                        <EmptyState
+                            title="No access rules found"
+                            description="No access policies are currently linked to this zone."
+                            action={
+                                <Button
+                                    variant="contained"
+                                    startIcon={<AddOutlinedIcon />}
+                                    onClick={() => setCreateOpen(true)}
+                                    disabled={groupsQuery.isLoading || groupsQuery.isError}
+                                >
+                                    Add first rule
+                                </Button>
+                            }
+                        />
+                    ) : (
+                        <Stack spacing={0} sx={{ p: 2.25 }}>
+                            <EntityTable
+                                gridTemplateColumns={desktopColumns}
+                                columns={
+                                    <>
+                                        <EntityTableHeaderCell>Rule</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">
+                                            Windows
+                                        </EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">
+                                            Status
+                                        </EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="right">
+                                            Actions
+                                        </EntityTableHeaderCell>
+                                    </>
+                                }
+                            >
+                                {rulesQuery.data.items.map((rule) => {
+                                    const isTogglingCurrent =
+                                        toggleMutation.isPending &&
+                                        toggleMutation.variables?.id === rule.id;
+
+                                    return (
+                                        <EntityRow key={rule.id}>
                                             <Box
                                                 sx={{
-                                                    display: 'flex',
+                                                    display: 'grid',
+                                                    gridTemplateColumns: {
+                                                        xs: '1fr',
+                                                        md: desktopColumns,
+                                                    },
                                                     alignItems: 'center',
-                                                    justifyContent: { xs: 'flex-start', md: 'center' },
-                                                    minHeight: 40,
+                                                    columnGap: 2,
+                                                    rowGap: 1.5,
+                                                    pl: { xs: 0, md: 1.25 },
                                                 }}
                                             >
-                                                <CodeBadge value={`${rule.windows?.length ?? 0} window(s)`} />
-                                            </Box>
+                                                <Stack spacing={0.45} minWidth={0}>
+                                                    <Typography variant="subtitle1" noWrap>
+                                                        Group rule
+                                                    </Typography>
 
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: { xs: 'flex-start', md: 'center' },
-                                                    minHeight: 40,
-                                                }}
-                                            >
-                                                <StatusChip
-                                                    label={rule.isActive ? 'Active' : 'Inactive'}
-                                                    variant={rule.isActive ? 'success' : 'warning'}
-                                                />
-                                            </Box>
-
-                                            <Stack
-                                                direction="row"
-                                                spacing={0.5}
-                                                justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
-                                                alignItems="center"
-                                            >
-                                                <RowActions>
-                                                    <Tooltip
-                                                        title={rule.isActive ? 'Deactivate rule' : 'Activate rule'}
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        noWrap
                                                     >
-                            <span>
-                              <IconButton
-                                  onClick={() => void handleToggleActive(rule)}
-                                  disabled={isTogglingCurrent}
-                              >
-                                {isTogglingCurrent ? (
-                                    <CircularProgress size={18} />
-                                ) : rule.isActive ? (
-                                    <PauseCircleOutlineOutlinedIcon />
-                                ) : (
-                                    <PlayCircleOutlineOutlinedIcon />
-                                )}
-                              </IconButton>
-                            </span>
-                                                    </Tooltip>
-                                                </RowActions>
-                                            </Stack>
-                                        </Box>
-                                    </EntityRow>
-                                );
-                            })}
-                        </EntityTable>
-                    </Stack>
-                )}
-            </Stack>
-        </SectionCard>
+                                                        {formatRulePeriod(rule)}
+                                                    </Typography>
+                                                </Stack>
+
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: {
+                                                            xs: 'flex-start',
+                                                            md: 'center',
+                                                        },
+                                                        minHeight: 40,
+                                                    }}
+                                                >
+                                                    <CodeBadge
+                                                        value={`${rule.windows?.length ?? 0} window(s)`}
+                                                    />
+                                                </Box>
+
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: {
+                                                            xs: 'flex-start',
+                                                            md: 'center',
+                                                        },
+                                                        minHeight: 40,
+                                                    }}
+                                                >
+                                                    <StatusChip
+                                                        label={rule.isActive ? 'Active' : 'Inactive'}
+                                                        variant={rule.isActive ? 'success' : 'warning'}
+                                                    />
+                                                </Box>
+
+                                                <Stack
+                                                    direction="row"
+                                                    spacing={0.5}
+                                                    justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
+                                                    alignItems="center"
+                                                >
+                                                    <RowActions>
+                                                        <Tooltip
+                                                            title={
+                                                                rule.isActive
+                                                                    ? 'Deactivate rule'
+                                                                    : 'Activate rule'
+                                                            }
+                                                        >
+                              <span>
+                                <IconButton
+                                    onClick={() => void handleToggleActive(rule)}
+                                    disabled={isTogglingCurrent}
+                                >
+                                  {isTogglingCurrent ? (
+                                      <CircularProgress size={18} />
+                                  ) : rule.isActive ? (
+                                      <PauseCircleOutlineOutlinedIcon />
+                                  ) : (
+                                      <PlayCircleOutlineOutlinedIcon />
+                                  )}
+                                </IconButton>
+                              </span>
+                                                        </Tooltip>
+                                                    </RowActions>
+                                                </Stack>
+                                            </Box>
+                                        </EntityRow>
+                                    );
+                                })}
+                            </EntityTable>
+                        </Stack>
+                    )}
+                </Stack>
+            </SectionCard>
+
+            <CreateAccessRuleDialog
+                open={createOpen}
+                zoneId={zone.id}
+                groups={groupsQuery.data?.items ?? []}
+                onClose={() => setCreateOpen(false)}
+            />
+        </>
     );
 }
