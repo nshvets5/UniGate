@@ -7,6 +7,7 @@ import { StudentsPage } from '../../pages/students-page';
 import { StudentDetailsPage } from '../../pages/student-details-page';
 import { ZonesPage } from '../../pages/zones-page';
 import { LoginPage } from '../../pages/login-page';
+import {AttemptsPage} from "../../pages/attempts-page.tsx";
 
 export function RouterProviderWrapper() {
     return (
@@ -27,6 +28,7 @@ export function RouterProviderWrapper() {
                         </Route>
 
                         <Route path="zones" element={<ZonesPage />} />
+                        <Route path="attempts" element={<AttemptsPage />} />
                     </Route>
                 </Route>
 

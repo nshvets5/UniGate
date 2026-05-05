@@ -2,6 +2,7 @@ import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import {
     Box,
     List,
@@ -38,6 +39,11 @@ const navItems = [
         to: '/admin/zones',
         icon: <LayersOutlinedIcon />,
     },
+    {
+        labelKey: 'navigation.attempts',
+        to: '/admin/attempts',
+        icon: <SecurityOutlinedIcon />,
+    }
 ];
 
 export function AppSidebar() {

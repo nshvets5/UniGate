@@ -7,6 +7,7 @@ import { StudentsPage } from '../../pages/students-page';
 import { StudentDetailsPage } from '../../pages/student-details-page';
 import { LoginPage } from '../../pages/login-page';
 import { ZonesPage } from '../../pages/zones-page';
+import { AttemptsPage } from '../../pages/attempts-page';
 
 export function RouterProviderWrapper() {
     return (
