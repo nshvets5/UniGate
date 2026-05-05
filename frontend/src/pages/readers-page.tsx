@@ -1,3 +1,4 @@
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
@@ -17,6 +18,8 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
 import type { ReaderDto } from '../entities/reader/api';
+import { useDoorsQuery } from '../features/doors/list-doors/use-doors-query';
+import { CreateReaderDialog } from '../features/readers/create-reader/create-reader-dialog';
 import { useReadersQuery } from '../features/readers/list-readers/use-readers-query';
 import { useRotateReaderKeyMutation } from '../features/readers/rotate-reader-key/use-rotate-reader-key-mutation';
 import { useToggleReaderActiveMutation } from '../features/readers/toggle-reader-active/use-toggle-reader-active-mutation';
@@ -47,17 +50,22 @@ function isReaderOnline(reader: ReaderDto) {
 
 function formatLastSeen(value?: string | null) {
     if (!value) return 'Never seen';
-
     return new Date(value).toLocaleString();
 }
 
 export function ReadersPage() {
     const theme = useTheme();
+    const [createOpen, setCreateOpen] = useState(false);
     const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
 
     const readersQuery = useReadersQuery({
         page: 1,
         pageSize: 50,
+    });
+
+    const doorsQuery = useDoorsQuery({
+        page: 1,
+        pageSize: 100,
     });
 
     const toggleMutation = useToggleReaderActiveMutation();
@@ -94,12 +102,29 @@ export function ReadersPage() {
             <PageHeader
                 title="Reader devices"
                 subtitle="Monitor physical reader devices, lifecycle state and API key security."
+                actions={
+                    <Button
+                        variant="contained"
+                        startIcon={<AddOutlinedIcon />}
+                        onClick={() => setCreateOpen(true)}
+                        disabled={doorsQuery.isLoading || doorsQuery.isError}
+                    >
+                        Create reader
+                    </Button>
+                }
             />
 
             {revealedApiKey ? (
                 <Alert severity="warning" onClose={() => setRevealedApiKey(null)}>
                     New API key generated. Copy it now, it will not be shown again:
-                    <Box component="code" sx={{ display: 'block', mt: 1, wordBreak: 'break-all' }}>
+                    <Box
+                        component="code"
+                        sx={{
+                            display: 'block',
+                            mt: 1,
+                            wordBreak: 'break-all',
+                        }}
+                    >
                         {revealedApiKey}
                     </Box>
                 </Alert>
@@ -139,15 +164,27 @@ export function ReadersPage() {
             ) : readers.length === 0 ? (
                 <EmptyState
                     title="No readers found"
-                    description="Create reader devices from the backend/admin API to start monitoring access points."
+                    description="Create reader devices to start monitoring access points."
+                    action={
+                        <Button
+                            variant="contained"
+                            startIcon={<AddOutlinedIcon />}
+                            onClick={() => setCreateOpen(true)}
+                            disabled={doorsQuery.isLoading || doorsQuery.isError}
+                        >
+                            Create reader
+                        </Button>
+                    }
                 />
             ) : (
                 <Grid container spacing={2.5}>
                     {readers.map((reader) => {
                         const online = isReaderOnline(reader);
+
                         const isTogglingCurrent =
                             toggleMutation.isPending &&
                             toggleMutation.variables?.id === reader.id;
+
                         const isRotatingCurrent =
                             rotateKeyMutation.isPending &&
                             rotateKeyMutation.variables === reader.id;
@@ -233,12 +270,7 @@ export function ReadersPage() {
                                             </Typography>
                                         </Stack>
 
-                                        <Box
-                                            sx={{
-                                                height: 1,
-                                                bgcolor: 'divider',
-                                            }}
-                                        />
+                                        <Box sx={{ height: 1, bgcolor: 'divider' }} />
 
                                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                             <Button
@@ -281,6 +313,13 @@ export function ReadersPage() {
                     })}
                 </Grid>
             )}
+
+            <CreateReaderDialog
+                open={createOpen}
+                doors={doorsQuery.data?.items ?? []}
+                onCreated={(apiKey) => setRevealedApiKey(apiKey)}
+                onClose={() => setCreateOpen(false)}
+            />
         </PageContainer>
     );
 }

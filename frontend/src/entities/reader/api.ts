@@ -45,3 +45,20 @@ export async function rotateReaderApiKey(id: string) {
 
     return response.data;
 }
+
+export type CreateReaderRequest = {
+    code: string;
+    name: string;
+    doorId: string;
+    type: ReaderType;
+};
+
+export async function createReader(payload: CreateReaderRequest) {
+    const response = await api.post<{
+        id: string;
+        code: string;
+        apiKey: string;
+    }>('/readers', payload);
+
+    return response.data;
+}
