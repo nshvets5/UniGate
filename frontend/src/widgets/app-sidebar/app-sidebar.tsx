@@ -3,6 +3,7 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import {
     Box,
     List,
@@ -43,6 +44,11 @@ const navItems = [
         labelKey: 'navigation.attempts',
         to: '/admin/attempts',
         icon: <SecurityOutlinedIcon />,
+    },
+    {
+        labelKey: 'navigation.readers',
+        to: '/admin/readers',
+        icon: <MemoryOutlinedIcon />,
     }
 ];
 

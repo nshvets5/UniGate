@@ -8,6 +8,7 @@ import { StudentDetailsPage } from '../../pages/student-details-page';
 import { LoginPage } from '../../pages/login-page';
 import { ZonesPage } from '../../pages/zones-page';
 import { AttemptsPage } from '../../pages/attempts-page';
+import { ReadersPage } from '../../pages/readers-page';
 
 export function RouterProviderWrapper() {
     return (
@@ -23,6 +24,8 @@ export function RouterProviderWrapper() {
                         <Route path="students/:id" element={<StudentDetailsPage />} />
                         <Route path="students" element={<StudentsPage />} />
                         <Route path="zones" element={<ZonesPage />} />
+                        <Route path="attempts" element={<AttemptsPagePage />} />
+                        <Route path="readers" element={<ReadersPage  />} />
                     </Route>
                 </Route>
 
