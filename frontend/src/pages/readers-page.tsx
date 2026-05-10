@@ -34,6 +34,7 @@ import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import { useNavigate } from 'react-router-dom';
 
 const readerTypeLabels: Record<number, string> = {
     1: 'RFID',
@@ -63,6 +64,7 @@ function getDoorLabel(door: DoorDto | undefined, fallbackDoorId: string) {
 
 export function ReadersPage() {
     const theme = useTheme();
+    const navigate = useNavigate();
     const [createOpen, setCreateOpen] = useState(false);
     const [editingReader, setEditingReader] = useState<ReaderDto | null>(null);
     const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
@@ -239,9 +241,30 @@ export function ReadersPage() {
                                                 </Box>
 
                                                 <Stack spacing={0.35}>
-                                                    <Typography variant="h6" noWrap>
-                                                        {reader.name}
-                                                    </Typography>
+                                                    <Box
+                                                        component="button"
+                                                        type="button"
+                                                        onClick={() => navigate(`/admin/readers/${reader.id}`)}
+                                                        sx={{
+                                                            all: 'unset',
+                                                            cursor: 'pointer',
+                                                            maxWidth: '100%',
+                                                        }}
+                                                    >
+                                                        <Typography
+                                                            variant="h6"
+                                                            noWrap
+                                                            sx={{
+                                                                color: 'text.primary',
+                                                                transition: 'color 0.18s ease',
+                                                                '&:hover': {
+                                                                    color: 'primary.main',
+                                                                },
+                                                            }}
+                                                        >
+                                                            {reader.name}
+                                                        </Typography>
+                                                    </Box>
                                                     <CodeBadge value={reader.code} />
                                                 </Stack>
                                             </Stack>
