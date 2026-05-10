@@ -6,6 +6,7 @@ import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
 import ManageSearchOutlinedIcon from '@mui/icons-material/ManageSearchOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import {
     Box,
     List,
@@ -61,6 +62,11 @@ const navItems = [
         labelKey: 'navigation.audit',
         to: '/admin/audit',
         icon: <ManageSearchOutlinedIcon />,
+    },
+    {
+        labelKey: 'navigation.timetable',
+        to: '/admin/timetable/batches',
+        icon: <CalendarMonthOutlinedIcon />,
     },
 ];
 
