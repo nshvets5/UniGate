@@ -84,3 +84,20 @@ export async function applyTimetablePreview(payload: ApplyTimetablePreviewReques
 
     return response.data;
 }
+
+export async function previewTimetableIcs(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post<TimetablePreviewResponseDto>(
+        '/timetable/import/ics/preview',
+        formData,
+        {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        }
+    );
+
+    return response.data;
+}

@@ -8,6 +8,8 @@ import {
     CircularProgress,
     Divider,
     Stack,
+    ToggleButton,
+    ToggleButtonGroup,
     Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -16,32 +18,66 @@ import { useNavigate } from 'react-router-dom';
 import type { TimetablePreviewResponseDto } from '../entities/timetable/api';
 import { useApplyTimetablePreviewMutation } from '../features/timetable/apply-preview/use-apply-timetable-preview-mutation';
 import { usePreviewTimetableCsvMutation } from '../features/timetable/import-csv/use-preview-timetable-csv-mutation';
+import { usePreviewTimetableIcsMutation } from '../features/timetable/import-ics/use-preview-timetable-ics-mutation';
 import { EmptyState } from '../shared/ui/empty-state';
 import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
 
+type ImportFormat = 'csv' | 'ics';
+
 export function TimetableImportPage() {
     const theme = useTheme();
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+    const [format, setFormat] = useState<ImportFormat>('csv');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<TimetablePreviewResponseDto | null>(null);
     const [applyResultVisible, setApplyResultVisible] = useState(false);
 
-    const previewMutation = usePreviewTimetableCsvMutation();
+    const csvPreviewMutation = usePreviewTimetableCsvMutation();
+    const icsPreviewMutation = usePreviewTimetableIcsMutation();
     const applyMutation = useApplyTimetablePreviewMutation();
+
+    const isPreviewPending =
+        csvPreviewMutation.isPending || icsPreviewMutation.isPending;
+
+    const isPreviewError =
+        csvPreviewMutation.isError || icsPreviewMutation.isError;
+
+    const handleFormatChange = (_: unknown, value: ImportFormat | null) => {
+        if (!value) return;
+
+        setFormat(value);
+        setSelectedFile(null);
+        setPreview(null);
+        setApplyResultVisible(false);
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+
+        csvPreviewMutation.reset();
+        icsPreviewMutation.reset();
+    };
 
     const handleFileChange = async (file: File | null) => {
         setSelectedFile(file);
         setPreview(null);
         setApplyResultVisible(false);
 
+        csvPreviewMutation.reset();
+        icsPreviewMutation.reset();
+
         if (!file) return;
 
-        const result = await previewMutation.mutateAsync(file);
+        const result =
+            format === 'csv'
+                ? await csvPreviewMutation.mutateAsync(file)
+                : await icsPreviewMutation.mutateAsync(file);
+
         setPreview(result);
     };
 
@@ -61,7 +97,7 @@ export function TimetableImportPage() {
         <PageContainer>
             <PageHeader
                 title="Timetable import"
-                subtitle="Upload CSV files, preview validation results and apply timetable snapshots."
+                subtitle="Upload CSV or ICS files, preview validation results and apply timetable snapshots."
                 actions={
                     <Button
                         variant="outlined"
@@ -81,9 +117,30 @@ export function TimetableImportPage() {
             <SectionCard>
                 <Stack spacing={2.5}>
                     <Stack spacing={0.75}>
-                        <Typography variant="subtitle1">CSV file</Typography>
+                        <Typography variant="subtitle1">Import format</Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Select a CSV timetable file. The system will validate it and show a preview before applying changes.
+                            Select the timetable file format before uploading a file for preview.
+                        </Typography>
+                    </Stack>
+
+                    <ToggleButtonGroup
+                        exclusive
+                        value={format}
+                        onChange={handleFormatChange}
+                        size="small"
+                    >
+                        <ToggleButton value="csv">CSV</ToggleButton>
+                        <ToggleButton value="ics">ICS</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    <Divider />
+
+                    <Stack spacing={0.75}>
+                        <Typography variant="subtitle1">
+                            {format.toUpperCase()} file
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            The system will validate the selected file and show a preview before applying changes.
                         </Typography>
                     </Stack>
 
@@ -93,7 +150,7 @@ export function TimetableImportPage() {
                             p: 4,
                             borderRadius: 3,
                             border: '1px dashed',
-                            borderColor: previewMutation.isError
+                            borderColor: isPreviewError
                                 ? 'error.main'
                                 : alpha(theme.palette.primary.main, 0.45),
                             bgcolor: alpha(theme.palette.primary.main, 0.04),
@@ -111,7 +168,7 @@ export function TimetableImportPage() {
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept=".csv,text/csv"
+                            accept={format === 'csv' ? '.csv,text/csv' : '.ics,text/calendar'}
                             hidden
                             onChange={(event) => {
                                 const file = event.target.files?.[0] ?? null;
@@ -131,7 +188,7 @@ export function TimetableImportPage() {
                                     color: 'primary.main',
                                 }}
                             >
-                                {previewMutation.isPending ? (
+                                {isPreviewPending ? (
                                     <CircularProgress size={26} />
                                 ) : (
                                     <CloudUploadOutlinedIcon />
@@ -139,16 +196,18 @@ export function TimetableImportPage() {
                             </Box>
 
                             <Typography variant="h6">
-                                {selectedFile ? selectedFile.name : 'Choose CSV file'}
+                                {selectedFile
+                                    ? selectedFile.name
+                                    : `Choose ${format.toUpperCase()} file`}
                             </Typography>
 
                             <Typography variant="body2" color="text.secondary">
-                                Click here to select a timetable CSV file for preview.
+                                Click here to select a timetable file for preview.
                             </Typography>
                         </Stack>
                     </Box>
 
-                    {previewMutation.isError ? (
+                    {isPreviewError ? (
                         <Alert severity="error">
                             Failed to generate preview. Please check the file format and try again.
                         </Alert>
@@ -159,7 +218,7 @@ export function TimetableImportPage() {
             {!preview ? (
                 <EmptyState
                     title="No preview yet"
-                    description="Upload a CSV file to see import statistics, validation issues and semantic changes."
+                    description="Upload a timetable file to see import statistics, validation issues and semantic changes."
                 />
             ) : (
                 <>
@@ -259,7 +318,9 @@ export function TimetableImportPage() {
                                         </Box>
 
                                         <Stack spacing={0.5}>
-                                            <Typography variant="subtitle2">{issue.message}</Typography>
+                                            <Typography variant="subtitle2">
+                                                {issue.message}
+                                            </Typography>
                                             <Typography variant="body2" color="text.secondary">
                                                 {issue.code}
                                             </Typography>
