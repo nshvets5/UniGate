@@ -65,7 +65,7 @@ const navItems = [
     },
     {
         labelKey: 'navigation.timetable',
-        to: '/admin/timetable/batches',
+        to: '/admin/timetable/import',
         icon: <CalendarMonthOutlinedIcon />,
     },
 ];

@@ -13,6 +13,7 @@ import { ReaderDetailsPage } from '../../pages/reader-details-page';
 import { ReaderEmulatorPage } from '../../pages/reader-emulator-page';
 import { AuditPage } from '../../pages/audit-page';
 import { TimetableBatchesPage } from '../../pages/timetable-batches-page';
+import { TimetableImportPage } from '../../pages/timetable-import-page';
 
 export function RouterProviderWrapper() {
     return (
@@ -40,6 +41,7 @@ export function RouterProviderWrapper() {
                         <Route path="emulator" element={<ReaderEmulatorPage />} />
                         <Route path="audit" element={<AuditPage />} />
                         <Route path="timetable/batches" element={<TimetableBatchesPage />} />
+                        <Route path="timetable/import" element={<TimetableImportPage />} />
                     </Route>
                 </Route>
 

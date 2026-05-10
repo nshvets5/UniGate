@@ -1,5 +1,6 @@
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import RestoreOutlinedIcon from '@mui/icons-material/RestoreOutlined';
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import {
     Box,
     Button,
@@ -23,6 +24,7 @@ import { PageHeader } from '../shared/ui/page-header';
 import { RowActions } from '../shared/ui/row-actions';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import { useNavigate } from 'react-router-dom';
 
 function formatDateTime(value?: string | null) {
     if (!value) return '—';
@@ -45,6 +47,7 @@ function getBatchVariant(
 
 export function TimetableBatchesPage() {
     const theme = useTheme();
+    const navigate = useNavigate();
     const desktopColumns = 'minmax(280px, 1.8fr) 140px 160px 160px 160px';
 
     const batchesQuery = useTimetableBatchesQuery({
@@ -76,6 +79,15 @@ export function TimetableBatchesPage() {
             <PageHeader
                 title="Timetable batches"
                 subtitle="Review import history, active timetable state and rollback points."
+                actions={
+                    <Button
+                        variant="contained"
+                        startIcon={<UploadFileOutlinedIcon />}
+                        onClick={() => navigate('/admin/timetable/import')}
+                    >
+                        Import CSV
+                    </Button>
+                }
             />
 
             <Box
