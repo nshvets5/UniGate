@@ -9,6 +9,8 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import { IconButton, Tooltip } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
 import { useAuditEventsQuery } from '../features/audit/list-audit-events/use-audit-events-query';
@@ -19,6 +21,8 @@ import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import type { AuditEventDto } from '../entities/audit/api';
+import { AuditEventDetailsDialog } from '../features/audit/audit-event-details/audit-event-details-dialog';
 
 function formatDateTime(value: string) {
     return new Date(value).toLocaleString();
@@ -48,6 +52,7 @@ function getEventVariant(type: string): 'success' | 'warning' | 'error' | 'info'
 
 export function AuditPage() {
     const theme = useTheme();
+    const [selectedEvent, setSelectedEvent] = useState<AuditEventDto | null>(null);
 
     const [type, setType] = useState('');
     const [resourceType, setResourceType] = useState('');
@@ -151,7 +156,7 @@ export function AuditPage() {
                                     display: 'grid',
                                     gridTemplateColumns: {
                                         xs: '1fr',
-                                        md: '48px minmax(0, 1fr) 180px',
+                                        md: '48px minmax(0, 1fr) 180px 48px',
                                     },
                                     gap: 2,
                                     alignItems: 'flex-start',
@@ -223,11 +228,22 @@ export function AuditPage() {
                                 >
                                     {formatDateTime(event.occurredAt)}
                                 </Typography>
+
+                                <Tooltip title="View details">
+                                    <IconButton onClick={() => setSelectedEvent(event)}>
+                                        <VisibilityOutlinedIcon />
+                                    </IconButton>
+                                </Tooltip>
                             </Box>
                         ))}
                     </Stack>
                 )}
             </SectionCard>
+            <AuditEventDetailsDialog
+                open={Boolean(selectedEvent)}
+                event={selectedEvent}
+                onClose={() => setSelectedEvent(null)}
+            />
         </PageContainer>
     );
 }
