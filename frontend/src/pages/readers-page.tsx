@@ -1,4 +1,5 @@
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
@@ -17,12 +18,14 @@ import {
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
+import type { DoorDto } from '../entities/door/types';
 import type { ReaderDto } from '../entities/reader/api';
 import { useDoorsQuery } from '../features/doors/list-doors/use-doors-query';
 import { CreateReaderDialog } from '../features/readers/create-reader/create-reader-dialog';
 import { useReadersQuery } from '../features/readers/list-readers/use-readers-query';
 import { useRotateReaderKeyMutation } from '../features/readers/rotate-reader-key/use-rotate-reader-key-mutation';
 import { useToggleReaderActiveMutation } from '../features/readers/toggle-reader-active/use-toggle-reader-active-mutation';
+import { UpdateReaderDialog } from '../features/readers/update-reader/update-reader-dialog';
 import { CodeBadge } from '../shared/ui/code-badge';
 import { EmptyState } from '../shared/ui/empty-state';
 import { ErrorState } from '../shared/ui/error-state';
@@ -53,9 +56,15 @@ function formatLastSeen(value?: string | null) {
     return new Date(value).toLocaleString();
 }
 
+function getDoorLabel(door: DoorDto | undefined, fallbackDoorId: string) {
+    if (!door) return fallbackDoorId;
+    return `${door.name} (${door.code})`;
+}
+
 export function ReadersPage() {
     const theme = useTheme();
     const [createOpen, setCreateOpen] = useState(false);
+    const [editingReader, setEditingReader] = useState<ReaderDto | null>(null);
     const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
 
     const readersQuery = useReadersQuery({
@@ -72,6 +81,16 @@ export function ReadersPage() {
     const rotateKeyMutation = useRotateReaderKeyMutation();
 
     const readers = readersQuery.data?.items ?? [];
+
+    const doorMap = useMemo(() => {
+        const map = new Map<string, DoorDto>();
+
+        for (const door of doorsQuery.data?.items ?? []) {
+            map.set(door.id, door);
+        }
+
+        return map;
+    }, [doorsQuery.data]);
 
     const stats = useMemo(() => {
         const online = readers.filter(isReaderOnline).length;
@@ -180,6 +199,7 @@ export function ReadersPage() {
                 <Grid container spacing={2.5}>
                     {readers.map((reader) => {
                         const online = isReaderOnline(reader);
+                        const door = doorMap.get(reader.doorId);
 
                         const isTogglingCurrent =
                             toggleMutation.isPending &&
@@ -254,10 +274,10 @@ export function ReadersPage() {
 
                                         <Stack spacing={0.75}>
                                             <Typography variant="body2" color="text.secondary">
-                                                Door ID
+                                                Assigned door
                                             </Typography>
-                                            <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                                                {reader.doorId}
+                                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                                                {getDoorLabel(door, reader.doorId)}
                                             </Typography>
                                         </Stack>
 
@@ -273,6 +293,15 @@ export function ReadersPage() {
                                         <Box sx={{ height: 1, bgcolor: 'divider' }} />
 
                                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                            <Button
+                                                variant="outlined"
+                                                startIcon={<EditOutlinedIcon />}
+                                                onClick={() => setEditingReader(reader)}
+                                                disabled={doorsQuery.isLoading || doorsQuery.isError}
+                                            >
+                                                Edit
+                                            </Button>
+
                                             <Button
                                                 variant="outlined"
                                                 color={reader.isActive ? 'warning' : 'success'}
@@ -319,6 +348,13 @@ export function ReadersPage() {
                 doors={doorsQuery.data?.items ?? []}
                 onCreated={(apiKey) => setRevealedApiKey(apiKey)}
                 onClose={() => setCreateOpen(false)}
+            />
+
+            <UpdateReaderDialog
+                open={Boolean(editingReader)}
+                reader={editingReader}
+                doors={doorsQuery.data?.items ?? []}
+                onClose={() => setEditingReader(null)}
             />
         </PageContainer>
     );
