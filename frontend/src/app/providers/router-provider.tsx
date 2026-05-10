@@ -10,6 +10,7 @@ import { LoginPage } from '../../pages/login-page';
 import {AttemptsPage} from "../../pages/attempts-page.tsx";
 import { ReadersPage } from '../../pages/readers-page';
 import { ReaderDetailsPage } from '../../pages/reader-details-page';
+import { ReaderEmulatorPage } from '../../pages/reader-emulator-page';
 
 export function RouterProviderWrapper() {
     return (
@@ -34,6 +35,7 @@ export function RouterProviderWrapper() {
                         <Route path="readers" element={<ReadersPage  />} />
                         <Route path="readers/:id" element={<ReaderDetailsPage />} />
                         <Route path="readers" element={<ReadersPage />} />
+                        <Route path="emulator" element={<ReaderEmulatorPage />} />
                     </Route>
                 </Route>
 

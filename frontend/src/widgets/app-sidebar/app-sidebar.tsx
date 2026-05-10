@@ -4,6 +4,7 @@ import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
+import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
 import {
     Box,
     List,
@@ -49,7 +50,12 @@ const navItems = [
         labelKey: 'navigation.readers',
         to: '/admin/readers',
         icon: <MemoryOutlinedIcon />,
-    }
+    },
+    {
+        labelKey: 'navigation.emulator',
+        to: '/admin/emulator',
+        icon: <TerminalOutlinedIcon />,
+    },
 ];
 
 export function AppSidebar() {
