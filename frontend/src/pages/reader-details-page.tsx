@@ -1,24 +1,33 @@
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
-import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
-import HighlightOffOutlinedIcon from '@mui/icons-material/HighlightOffOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
+import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
+import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import SensorsOutlinedIcon from '@mui/icons-material/SensorsOutlined';
 import WifiOffOutlinedIcon from '@mui/icons-material/WifiOffOutlined';
 import WifiOutlinedIcon from '@mui/icons-material/WifiOutlined';
 import {
+    Alert,
     Box,
     Button,
     Chip,
+    CircularProgress,
     Divider,
     Grid,
     Stack,
     Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import type { ReaderDto } from '../entities/reader/api';
+import { useDoorsQuery } from '../features/doors/list-doors/use-doors-query';
 import { useReaderAttemptsQuery } from '../features/readers/reader-details/use-reader-attempts-query';
 import { useReaderQuery } from '../features/readers/reader-details/use-reader-query';
 import { useReaderStatusQuery } from '../features/readers/reader-details/use-reader-status-query';
+import { useRotateReaderKeyMutation } from '../features/readers/rotate-reader-key/use-rotate-reader-key-mutation';
+import { useToggleReaderActiveMutation } from '../features/readers/toggle-reader-active/use-toggle-reader-active-mutation';
+import { UpdateReaderDialog } from '../features/readers/update-reader/update-reader-dialog';
 import { CodeBadge } from '../shared/ui/code-badge';
 import { EmptyState } from '../shared/ui/empty-state';
 import { EntityRow } from '../shared/ui/entity-row';
@@ -47,6 +56,9 @@ export function ReaderDetailsPage() {
     const navigate = useNavigate();
     const { id = '' } = useParams();
 
+    const [editOpen, setEditOpen] = useState(false);
+    const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
+
     const readerQuery = useReaderQuery(id);
     const statusQuery = useReaderStatusQuery(id);
     const attemptsQuery = useReaderAttemptsQuery(id, {
@@ -54,7 +66,19 @@ export function ReaderDetailsPage() {
         pageSize: 10,
     });
 
+    const doorsQuery = useDoorsQuery({
+        page: 1,
+        pageSize: 100,
+    });
+
+    const toggleMutation = useToggleReaderActiveMutation();
+    const rotateKeyMutation = useRotateReaderKeyMutation();
+
     const reader = statusQuery.data ?? readerQuery.data;
+
+    const door = useMemo(() => {
+        return doorsQuery.data?.items.find((item) => item.id === reader?.doorId);
+    }, [doorsQuery.data, reader?.doorId]);
 
     const counters = useMemo(() => {
         const attempts = attemptsQuery.data?.items ?? [];
@@ -67,6 +91,28 @@ export function ReaderDetailsPage() {
     }, [attemptsQuery.data]);
 
     const attemptsColumns = '190px 170px 1fr 140px';
+
+    const handleToggleActive = async (readerToToggle: ReaderDto) => {
+        await toggleMutation.mutateAsync({
+            id: readerToToggle.id,
+            isActive: !readerToToggle.isActive,
+        });
+
+        await Promise.all([
+            readerQuery.refetch(),
+            statusQuery.refetch(),
+        ]);
+    };
+
+    const handleRotateKey = async (readerToRotate: ReaderDto) => {
+        const result = await rotateKeyMutation.mutateAsync(readerToRotate.id);
+        setRevealedApiKey(result.apiKey);
+
+        await Promise.all([
+            readerQuery.refetch(),
+            statusQuery.refetch(),
+        ]);
+    };
 
     if (readerQuery.isLoading) {
         return (
@@ -93,21 +139,87 @@ export function ReaderDetailsPage() {
 
     const online = 'isOnline' in reader ? reader.isOnline : false;
 
+    const isTogglingCurrent =
+        toggleMutation.isPending && toggleMutation.variables?.id === reader.id;
+
+    const isRotatingCurrent =
+        rotateKeyMutation.isPending && rotateKeyMutation.variables === reader.id;
+
     return (
         <PageContainer>
             <PageHeader
                 title={reader.name}
                 subtitle="Reader device status, heartbeat and recent scan decisions."
                 actions={
-                    <Button
-                        variant="outlined"
-                        startIcon={<ArrowBackOutlinedIcon />}
-                        onClick={() => navigate('/admin/readers')}
-                    >
-                        Back
-                    </Button>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Button
+                            variant="outlined"
+                            startIcon={<ArrowBackOutlinedIcon />}
+                            onClick={() => navigate('/admin/readers')}
+                        >
+                            Back
+                        </Button>
+
+                        <Button
+                            variant="outlined"
+                            startIcon={<EditOutlinedIcon />}
+                            onClick={() => setEditOpen(true)}
+                            disabled={doorsQuery.isLoading || doorsQuery.isError}
+                        >
+                            Edit
+                        </Button>
+
+                        <Button
+                            variant="outlined"
+                            color={reader.isActive ? 'warning' : 'success'}
+                            startIcon={
+                                isTogglingCurrent ? (
+                                    <CircularProgress size={16} />
+                                ) : reader.isActive ? (
+                                    <PauseCircleOutlineOutlinedIcon />
+                                ) : (
+                                    <PlayCircleOutlineOutlinedIcon />
+                                )
+                            }
+                            onClick={() => void handleToggleActive(reader)}
+                            disabled={isTogglingCurrent}
+                        >
+                            {reader.isActive ? 'Deactivate' : 'Activate'}
+                        </Button>
+
+                        <Button
+                            variant="outlined"
+                            startIcon={
+                                isRotatingCurrent ? (
+                                    <CircularProgress size={16} />
+                                ) : (
+                                    <KeyOutlinedIcon />
+                                )
+                            }
+                            onClick={() => void handleRotateKey(reader)}
+                            disabled={isRotatingCurrent}
+                        >
+                            Rotate key
+                        </Button>
+                    </Stack>
                 }
             />
+
+            {revealedApiKey ? (
+                <Alert severity="warning" onClose={() => setRevealedApiKey(null)}>
+                    New API key generated. Copy it now, it will not be shown again:
+                    <Box
+                        component="code"
+                        sx={{
+                            display: 'block',
+                            mt: 1,
+                            wordBreak: 'break-all',
+                        }}
+                    >
+                        {revealedApiKey}
+                    </Box>
+                </Alert>
+            ) : null}
 
             <SectionCard>
                 <Stack spacing={2.5}>
@@ -167,10 +279,10 @@ export function ReaderDetailsPage() {
 
                     <Stack spacing={1}>
                         <Typography variant="body2" color="text.secondary">
-                            Door ID
+                            Assigned door
                         </Typography>
-                        <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                            {reader.doorId}
+                        <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                            {door ? `${door.name} (${door.code})` : reader.doorId}
                         </Typography>
                     </Stack>
                 </Stack>
@@ -298,6 +410,13 @@ export function ReaderDetailsPage() {
                     </Stack>
                 )}
             </SectionCard>
+
+            <UpdateReaderDialog
+                open={editOpen}
+                reader={reader}
+                doors={doorsQuery.data?.items ?? []}
+                onClose={() => setEditOpen(false)}
+            />
         </PageContainer>
     );
 }
