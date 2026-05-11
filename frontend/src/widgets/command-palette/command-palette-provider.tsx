@@ -10,8 +10,24 @@ import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { CommandPalette } from './command-palette';
+
+type CommandPaletteContextValue = {
+    openCommandPalette: () => void;
+};
+
+const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
+
+export function useCommandPalette() {
+    const context = useContext(CommandPaletteContext);
+
+    if (!context) {
+        throw new Error('useCommandPalette must be used inside CommandPaletteProvider');
+    }
+
+    return context;
+}
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     const [open, setOpen] = useState(false);
@@ -108,10 +124,10 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            const isCommandPaletteShortcut =
+            const isShortcut =
                 (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
 
-            if (!isCommandPaletteShortcut) return;
+            if (!isShortcut) return;
 
             event.preventDefault();
             setOpen((current) => !current);
@@ -119,13 +135,18 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
 
         window.addEventListener('keydown', handleKeyDown);
 
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    const value = useMemo(
+        () => ({
+            openCommandPalette: () => setOpen(true),
+        }),
+        []
+    );
+
     return (
-        <>
+        <CommandPaletteContext.Provider value={value}>
             {children}
 
             <CommandPalette
@@ -133,6 +154,6 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 onClose={() => setOpen(false)}
                 commands={commands}
             />
-        </>
+        </CommandPaletteContext.Provider>
     );
 }

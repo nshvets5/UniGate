@@ -2,9 +2,11 @@ import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import {
     AppBar,
     Box,
+    Button,
     IconButton,
     Tooltip,
     Toolbar,
@@ -16,12 +18,15 @@ import { useNavigate } from 'react-router-dom';
 import { toggleLocale, toggleThemeMode } from '../../app/store/preferences.slice';
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks';
 import { endSession } from '../../shared/auth/auth-session';
+import { useCommandPalette } from '../command-palette/command-palette-provider';
 
 export function AppHeader() {
     const { t } = useTranslation();
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const theme = useTheme();
+    const { openCommandPalette } = useCommandPalette();
+
     const themeMode = useAppSelector((state) => state.preferences.themeMode);
     const locale = useAppSelector((state) => state.preferences.locale);
     const user = useAppSelector((state) => state.auth.user);
@@ -46,7 +51,7 @@ export function AppHeader() {
                 backdropFilter: 'blur(14px)',
             }}
         >
-            <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
+            <Toolbar disableGutters sx={{ justifyContent: 'space-between', gap: 2 }}>
                 <Box>
                     <Typography variant="h6">UniGate</Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -55,6 +60,43 @@ export function AppHeader() {
                 </Box>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<SearchOutlinedIcon />}
+                        onClick={openCommandPalette}
+                        sx={{
+                            textTransform: 'none',
+                            display: { xs: 'none', md: 'inline-flex' },
+                        }}
+                    >
+                        Search
+                        <Box
+                            component="span"
+                            sx={{
+                                ml: 1,
+                                px: 0.75,
+                                py: 0.25,
+                                borderRadius: 1,
+                                bgcolor: 'action.hover',
+                                color: 'text.secondary',
+                                fontSize: 12,
+                                fontWeight: 700,
+                            }}
+                        >
+                            Ctrl K
+                        </Box>
+                    </Button>
+
+                    <Tooltip title="Search">
+                        <IconButton
+                            onClick={openCommandPalette}
+                            sx={{ display: { xs: 'inline-flex', md: 'none' } }}
+                        >
+                            <SearchOutlinedIcon />
+                        </IconButton>
+                    </Tooltip>
+
                     <Tooltip title={t('actions.switchLanguage')}>
                         <IconButton onClick={() => dispatch(toggleLocale())}>
                             <LanguageOutlinedIcon />
@@ -67,7 +109,10 @@ export function AppHeader() {
                             px: 1.25,
                             py: 0.75,
                             borderRadius: 999,
-                            bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.16 : 0.10),
+                            bgcolor: alpha(
+                                theme.palette.primary.main,
+                                theme.palette.mode === 'dark' ? 0.16 : 0.1
+                            ),
                             color: 'primary.main',
                             textAlign: 'center',
                         }}
@@ -79,7 +124,11 @@ export function AppHeader() {
 
                     <Tooltip title={t('actions.switchTheme')}>
                         <IconButton onClick={() => dispatch(toggleThemeMode())}>
-                            {themeMode === 'light' ? <DarkModeOutlinedIcon /> : <LightModeOutlinedIcon />}
+                            {themeMode === 'light' ? (
+                                <DarkModeOutlinedIcon />
+                            ) : (
+                                <LightModeOutlinedIcon />
+                            )}
                         </IconButton>
                     </Tooltip>
 
