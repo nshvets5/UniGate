@@ -24,6 +24,7 @@ import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import { TimetablePreviewDiffViewer } from '../widgets/timetable/timetable-preview-diff-viewer';
 
 type ImportFormat = 'csv' | 'ics';
 
@@ -244,6 +245,8 @@ export function TimetableImportPage() {
                             </SectionCard>
                         ))}
                     </Box>
+
+                    <TimetablePreviewDiffViewer diff={preview.diff} />
 
                     <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
                         <Box
