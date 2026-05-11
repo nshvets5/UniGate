@@ -5,6 +5,7 @@ import { I18nProvider } from './i18n-provider';
 import { RouterProviderWrapper } from './router-provider';
 import { SnackbarProvider } from 'notistack';
 import { AuthBootstrapProvider } from './auth-bootstrap-provider';
+import { ApiErrorProvider } from './api-error-provider';
 
 export function AppProviders() {
     return (
@@ -13,9 +14,11 @@ export function AppProviders() {
                 <I18nProvider>
                     <ThemeProviderWrapper>
                         <SnackbarProvider maxSnack={3}>
+                            <ApiErrorProvider>
                             <AuthBootstrapProvider>
                                 <RouterProviderWrapper />
                             </AuthBootstrapProvider>
+                            </ApiErrorProvider>
                         </SnackbarProvider>
                     </ThemeProviderWrapper>
                 </I18nProvider>
