@@ -100,12 +100,21 @@ export function TimetableImportPage() {
                 title="Timetable import"
                 subtitle="Upload CSV or ICS files, preview validation results and apply timetable snapshots."
                 actions={
-                    <Button
-                        variant="outlined"
-                        onClick={() => navigate('/admin/timetable/batches')}
-                    >
-                        Batches history
-                    </Button>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Button
+                            variant="outlined"
+                            onClick={() => navigate('/admin/timetable/batches')}
+                        >
+                            Batches history
+                        </Button>
+
+                        <Button
+                            variant="outlined"
+                            onClick={() => navigate('/admin/timetable/sync')}
+                        >
+                            Sync status
+                        </Button>
+                    </Stack>
                 }
             />
 

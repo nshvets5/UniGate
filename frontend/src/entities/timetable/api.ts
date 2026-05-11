@@ -101,3 +101,30 @@ export async function previewTimetableIcs(file: File) {
 
     return response.data;
 }
+
+export type TimetableSyncStatusDto = {
+    enabled: boolean;
+    intervalSeconds: number;
+    jitterSeconds: number;
+    runOnStartup: boolean;
+    lastRunUtc: string | null;
+    lastSuccessUtc: string | null;
+    lastUpdatedRulesCount: number;
+    lastError: string | null;
+    ageSeconds: number | null;
+    staleAfterSeconds: number;
+    isStale: boolean;
+};
+
+export async function getTimetableSyncStatus() {
+    const response = await api.get<TimetableSyncStatusDto>(
+        '/timetable/sync/status'
+    );
+
+    return response.data;
+}
+
+export async function syncTimetableNow() {
+    const response = await api.post<void>('/timetable/sync-now');
+    return response.data;
+}
