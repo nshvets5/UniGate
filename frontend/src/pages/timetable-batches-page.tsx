@@ -1,3 +1,5 @@
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import RestoreOutlinedIcon from '@mui/icons-material/RestoreOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
@@ -11,20 +13,17 @@ import {
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { TimetableBatchDto } from '../entities/timetable/api';
 import { useActivateTimetableBatchMutation } from '../features/timetable/activate-batch/use-activate-timetable-batch-mutation';
 import { useTimetableBatchesQuery } from '../features/timetable/list-batches/use-timetable-batches-query';
 import { EmptyState } from '../shared/ui/empty-state';
-import { EntityRow } from '../shared/ui/entity-row';
-import { EntityTable, EntityTableHeaderCell } from '../shared/ui/entity-table';
 import { ErrorState } from '../shared/ui/error-state';
 import { LoadingState } from '../shared/ui/loading-state';
 import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
-import { RowActions } from '../shared/ui/row-actions';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
-import { useNavigate } from 'react-router-dom';
 
 function formatDateTime(value?: string | null) {
     if (!value) return '—';
@@ -48,11 +47,10 @@ function getBatchVariant(
 export function TimetableBatchesPage() {
     const theme = useTheme();
     const navigate = useNavigate();
-    const desktopColumns = 'minmax(280px, 1.8fr) 140px 160px 160px 160px';
 
     const batchesQuery = useTimetableBatchesQuery({
         page: 1,
-        pageSize: 30,
+        pageSize: 50,
     });
 
     const activateMutation = useActivateTimetableBatchMutation();
@@ -64,7 +62,7 @@ export function TimetableBatchesPage() {
 
         return {
             total: batches.length,
-            activeName: active?.fileName ?? active?.id ?? '—',
+            activeBatch: active?.fileName ?? active?.id ?? '—',
             importedRows: active?.importedRows ?? 0,
             skippedRows: active?.skippedRows ?? 0,
         };
@@ -78,14 +76,14 @@ export function TimetableBatchesPage() {
         <PageContainer>
             <PageHeader
                 title="Timetable batches"
-                subtitle="Review import history, active timetable state and rollback points."
+                subtitle="Review import snapshots, active timetable state and rollback points."
                 actions={
                     <Button
                         variant="contained"
                         startIcon={<UploadFileOutlinedIcon />}
                         onClick={() => navigate('/admin/timetable/import')}
                     >
-                        Import CSV
+                        Import timetable
                     </Button>
                 }
             />
@@ -99,7 +97,7 @@ export function TimetableBatchesPage() {
             >
                 {[
                     ['Total batches', stats.total],
-                    ['Active batch', stats.activeName],
+                    ['Active batch', stats.activeBatch],
                     ['Imported rows', stats.importedRows],
                     ['Skipped rows', stats.skippedRows],
                 ].map(([label, value]) => (
@@ -107,6 +105,7 @@ export function TimetableBatchesPage() {
                         <Typography variant="body2" color="text.secondary">
                             {label}
                         </Typography>
+
                         <Typography
                             variant={typeof value === 'number' ? 'h4' : 'h6'}
                             sx={{ mt: 1, wordBreak: 'break-word' }}
@@ -122,9 +121,9 @@ export function TimetableBatchesPage() {
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <Box
                             sx={{
-                                width: 42,
-                                height: 42,
-                                borderRadius: 2.5,
+                                width: 46,
+                                height: 46,
+                                borderRadius: 3,
                                 display: 'grid',
                                 placeItems: 'center',
                                 bgcolor: alpha(theme.palette.primary.main, 0.1),
@@ -135,9 +134,9 @@ export function TimetableBatchesPage() {
                         </Box>
 
                         <Stack>
-                            <Typography variant="subtitle1">Import history</Typography>
+                            <Typography variant="subtitle1">Import timeline</Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Batches can be activated to roll back or switch the active timetable snapshot.
+                                Each batch represents an immutable timetable snapshot. Activate a previous batch to roll back.
                             </Typography>
                         </Stack>
                     </Stack>
@@ -160,104 +159,129 @@ export function TimetableBatchesPage() {
                     <EmptyState
                         title="No timetable batches found"
                         description="Import a timetable file to create the first batch snapshot."
+                        action={
+                            <Button
+                                variant="contained"
+                                startIcon={<UploadFileOutlinedIcon />}
+                                onClick={() => navigate('/admin/timetable/import')}
+                            >
+                                Import timetable
+                            </Button>
+                        }
                     />
                 ) : (
-                    <Stack spacing={0} sx={{ p: 2.25 }}>
-                        <EntityTable
-                            gridTemplateColumns={desktopColumns}
-                            columns={
-                                <>
-                                    <EntityTableHeaderCell>Batch</EntityTableHeaderCell>
-                                    <EntityTableHeaderCell align="center">Source</EntityTableHeaderCell>
-                                    <EntityTableHeaderCell align="center">Rows</EntityTableHeaderCell>
-                                    <EntityTableHeaderCell align="center">Status</EntityTableHeaderCell>
-                                    <EntityTableHeaderCell align="right">Actions</EntityTableHeaderCell>
-                                </>
-                            }
-                        >
-                            {batches.map((batch) => {
-                                const isActivatingCurrent =
-                                    activateMutation.isPending &&
-                                    activateMutation.variables === batch.id;
+                    <Stack spacing={0} divider={<Divider />}>
+                        {batches.map((batch) => {
+                            const isActivatingCurrent =
+                                activateMutation.isPending &&
+                                activateMutation.variables === batch.id;
 
-                                return (
-                                    <EntityRow
-                                        key={batch.id}
-                                        accentColor={
-                                            batch.isActive
-                                                ? theme.palette.success.main
-                                                : theme.palette.divider
-                                        }
+                            return (
+                                <Box
+                                    key={batch.id}
+                                    sx={{
+                                        p: 3,
+                                        display: 'grid',
+                                        gridTemplateColumns: {
+                                            xs: '1fr',
+                                            lg: '52px minmax(0, 1fr) 190px 180px',
+                                        },
+                                        gap: 2,
+                                        alignItems: 'center',
+                                        bgcolor: batch.isActive
+                                            ? alpha(theme.palette.success.main, 0.045)
+                                            : 'transparent',
+                                        transition: 'background-color 0.18s ease',
+                                        '&:hover': {
+                                            bgcolor: batch.isActive
+                                                ? alpha(theme.palette.success.main, 0.075)
+                                                : alpha(theme.palette.primary.main, 0.03),
+                                        },
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 46,
+                                            height: 46,
+                                            borderRadius: 3,
+                                            display: 'grid',
+                                            placeItems: 'center',
+                                            bgcolor: batch.isActive
+                                                ? alpha(theme.palette.success.main, 0.14)
+                                                : alpha(theme.palette.primary.main, 0.1),
+                                            color: batch.isActive ? 'success.main' : 'primary.main',
+                                        }}
                                     >
-                                        <Box
-                                            sx={{
-                                                display: 'grid',
-                                                gridTemplateColumns: {
-                                                    xs: '1fr',
-                                                    md: desktopColumns,
-                                                },
-                                                alignItems: 'center',
-                                                columnGap: 2,
-                                                rowGap: 1.5,
-                                                pl: { xs: 0, md: 1.25 },
-                                            }}
+                                        {batch.isActive ? (
+                                            <CheckCircleOutlineOutlinedIcon />
+                                        ) : (
+                                            <CalendarMonthOutlinedIcon />
+                                        )}
+                                    </Box>
+
+                                    <Stack spacing={1} minWidth={0}>
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                            <StatusChip
+                                                label={batch.isActive ? 'Active' : batch.status}
+                                                variant={getBatchVariant(batch)}
+                                            />
+                                            <StatusChip label={batch.source} variant="default" />
+                                        </Stack>
+
+                                        <Typography variant="subtitle1" noWrap>
+                                            {batch.fileName ?? batch.id}
+                                        </Typography>
+
+                                        <Typography variant="body2" color="text.secondary" noWrap>
+                                            Created: {formatDateTime(batch.createdAt)}
+                                        </Typography>
+
+                                        {batch.activatedAt ? (
+                                            <Typography variant="body2" color="text.secondary" noWrap>
+                                                Activated: {formatDateTime(batch.activatedAt)}
+                                            </Typography>
+                                        ) : null}
+                                    </Stack>
+
+                                    <Stack spacing={0.75}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Import result
+                                        </Typography>
+
+                                        <Typography variant="h6">
+                                            {batch.importedRows}/{batch.totalRows}
+                                        </Typography>
+
+                                        <Typography variant="body2" color="text.secondary">
+                                            skipped {batch.skippedRows}
+                                        </Typography>
+                                    </Stack>
+
+                                    <Stack
+                                        direction="row"
+                                        justifyContent={{ xs: 'flex-start', lg: 'flex-end' }}
+                                    >
+                                        <Button
+                                            variant={batch.isActive ? 'contained' : 'outlined'}
+                                            color={batch.isActive ? 'success' : 'primary'}
+                                            startIcon={
+                                                isActivatingCurrent ? (
+                                                    <CircularProgress size={16} />
+                                                ) : batch.isActive ? (
+                                                    <CheckCircleOutlineOutlinedIcon />
+                                                ) : (
+                                                    <RestoreOutlinedIcon />
+                                                )
+                                            }
+                                            onClick={() => void handleActivate(batch)}
+                                            disabled={batch.isActive || isActivatingCurrent}
                                         >
-                                            <Stack spacing={0.45} minWidth={0}>
-                                                <Typography variant="subtitle1" noWrap>
-                                                    {batch.fileName ?? batch.id}
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary" noWrap>
-                                                    Created {formatDateTime(batch.createdAt)}
-                                                </Typography>
-                                            </Stack>
-
-                                            <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
-                                                <StatusChip label={batch.source} variant="default" />
-                                            </Box>
-
-                                            <Stack alignItems={{ xs: 'flex-start', md: 'center' }} spacing={0.25}>
-                                                <Typography variant="body2">
-                                                    {batch.importedRows}/{batch.totalRows}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    skipped {batch.skippedRows}
-                                                </Typography>
-                                            </Stack>
-
-                                            <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
-                                                <StatusChip
-                                                    label={batch.isActive ? 'Active' : batch.status}
-                                                    variant={getBatchVariant(batch)}
-                                                />
-                                            </Box>
-
-                                            <Stack
-                                                direction="row"
-                                                justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
-                                            >
-                                                <RowActions>
-                                                    <Button
-                                                        variant="outlined"
-                                                        size="small"
-                                                        startIcon={
-                                                            isActivatingCurrent ? (
-                                                                <CircularProgress size={16} />
-                                                            ) : (
-                                                                <RestoreOutlinedIcon />
-                                                            )
-                                                        }
-                                                        onClick={() => void handleActivate(batch)}
-                                                        disabled={batch.isActive || isActivatingCurrent}
-                                                    >
-                                                        {batch.isActive ? 'Current' : 'Activate'}
-                                                    </Button>
-                                                </RowActions>
-                                            </Stack>
-                                        </Box>
-                                    </EntityRow>
-                                );
-                            })}
-                        </EntityTable>
+                                            {batch.isActive ? 'Current' : 'Activate'}
+                                        </Button>
+                                    </Stack>
+                                </Box>
+                            );
+                        })}
                     </Stack>
                 )}
             </SectionCard>
