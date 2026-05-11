@@ -38,6 +38,7 @@ import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import { ReaderDiagnosticsPanel } from '../widgets/readers/reader-diagnostics-panel';
 
 const readerTypeLabels: Record<number, string> = {
     1: 'RFID',
@@ -287,6 +288,10 @@ export function ReaderDetailsPage() {
                     </Stack>
                 </Stack>
             </SectionCard>
+
+            {'utcNow' in reader ? (
+                <ReaderDiagnosticsPanel status={reader} />
+            ) : null}
 
             <Grid container spacing={2}>
                 {[
