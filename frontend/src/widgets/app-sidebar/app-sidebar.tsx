@@ -8,6 +8,8 @@ import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import {
     Box,
     List,
@@ -83,9 +85,19 @@ const navSections = [
         title: 'Timetable',
         items: [
             {
-                labelKey: 'navigation.timetable',
+                labelKey: 'navigation.timetableImport',
                 to: '/admin/timetable/import',
                 icon: <CalendarMonthOutlinedIcon />,
+            },
+            {
+                labelKey: 'navigation.timetableBatches',
+                to: '/admin/timetable/batches',
+                icon: <HistoryOutlinedIcon />,
+            },
+            {
+                labelKey: 'navigation.timetableSync',
+                to: '/admin/timetable/sync',
+                icon: <SyncOutlinedIcon />,
             },
         ],
     },
