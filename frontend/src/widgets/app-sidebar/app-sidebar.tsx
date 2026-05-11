@@ -7,6 +7,7 @@ import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
 import ManageSearchOutlinedIcon from '@mui/icons-material/ManageSearchOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import {
     Box,
     List,
@@ -67,6 +68,11 @@ const navItems = [
         labelKey: 'navigation.timetable',
         to: '/admin/timetable/import',
         icon: <CalendarMonthOutlinedIcon />,
+    },
+    {
+        labelKey: 'navigation.security',
+        to: '/admin/profile/security',
+        icon: <ShieldOutlinedIcon />,
     },
 ];
 

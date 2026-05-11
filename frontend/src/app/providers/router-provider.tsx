@@ -15,6 +15,7 @@ import { AuditPage } from '../../pages/audit-page';
 import { TimetableBatchesPage } from '../../pages/timetable-batches-page';
 import { TimetableImportPage } from '../../pages/timetable-import-page';
 import { TimetableSyncPage } from '../../pages/timetable-sync-page';
+import { SecurityProfilePage } from '../../pages/security-profile-page';
 
 export function RouterProviderWrapper() {
     return (
@@ -44,6 +45,7 @@ export function RouterProviderWrapper() {
                         <Route path="timetable/batches" element={<TimetableBatchesPage />} />
                         <Route path="timetable/import" element={<TimetableImportPage />} />
                         <Route path="timetable/sync" element={<TimetableSyncPage />} />
+                        <Route path="profile/security" element={<SecurityProfilePage />} />
                     </Route>
                 </Route>
 
