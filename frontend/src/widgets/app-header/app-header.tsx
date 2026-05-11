@@ -19,6 +19,7 @@ import { toggleLocale, toggleThemeMode } from '../../app/store/preferences.slice
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks';
 import { endSession } from '../../shared/auth/auth-session';
 import { useCommandPalette } from '../command-palette/command-palette-provider';
+import { NotificationsCenter } from '../notifications-center/notifications-center';
 
 export function AppHeader() {
     const { t } = useTranslation();
@@ -96,6 +97,8 @@ export function AppHeader() {
                             <SearchOutlinedIcon />
                         </IconButton>
                     </Tooltip>
+
+                    <NotificationsCenter />
 
                     <Tooltip title={t('actions.switchLanguage')}>
                         <IconButton onClick={() => dispatch(toggleLocale())}>
