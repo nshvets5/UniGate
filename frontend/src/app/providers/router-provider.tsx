@@ -16,10 +16,12 @@ import { TimetableBatchesPage } from '../../pages/timetable-batches-page';
 import { TimetableImportPage } from '../../pages/timetable-import-page';
 import { TimetableSyncPage } from '../../pages/timetable-sync-page';
 import { SecurityProfilePage } from '../../pages/security-profile-page';
+import { CommandPaletteProvider } from '../../widgets/command-palette/command-palette-provider';
 
 export function RouterProviderWrapper() {
     return (
         <BrowserRouter>
+            <CommandPaletteProvider>
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
@@ -51,6 +53,7 @@ export function RouterProviderWrapper() {
 
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
+            </CommandPaletteProvider>
         </BrowserRouter>
     );
 }
