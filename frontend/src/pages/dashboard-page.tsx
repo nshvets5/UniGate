@@ -28,6 +28,7 @@ import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import { SystemStatusWidget } from '../widgets/dashboard/system-status-widget';
 
 function formatDateTime(value?: string | null) {
     if (!value) return '—';
@@ -352,6 +353,12 @@ export function DashboardPage() {
 
                 <Grid size={{ xs: 12, xl: 5 }}>
                     <Stack spacing={3}>
+                        <SystemStatusWidget
+                            readers={readers}
+                            syncStatus={syncStatus}
+                            readersLoading={readersQuery.isLoading}
+                            syncLoading={syncStatusQuery.isLoading}
+                        />
                         <SectionCard>
                             <Stack spacing={2}>
                                 <Stack direction="row" spacing={1.5} alignItems="center">
