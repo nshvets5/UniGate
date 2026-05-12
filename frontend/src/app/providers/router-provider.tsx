@@ -17,6 +17,8 @@ import { TimetableImportPage } from '../../pages/timetable-import-page';
 import { TimetableSyncPage } from '../../pages/timetable-sync-page';
 import { SecurityProfilePage } from '../../pages/security-profile-page';
 import { CommandPaletteProvider } from '../../widgets/command-palette/command-palette-provider';
+import { RequireRole } from '../router/require-role';
+import { appRoles } from '../../shared/auth/roles';
 
 export function RouterProviderWrapper() {
     return (
@@ -28,26 +30,23 @@ export function RouterProviderWrapper() {
 
                 <Route element={<RequireAuth />}>
                     <Route path="/admin" element={<AdminLayout />}>
-                        <Route index element={<Navigate to="dashboard" replace />} />
                         <Route path="dashboard" element={<DashboardPage />} />
-                        <Route path="groups" element={<GroupsPage />} />
-
-                        <Route path="students">
-                            <Route index element={<StudentsPage />} />
-                            <Route path=":id" element={<StudentDetailsPage />} />
-                        </Route>
-
-                        <Route path="zones" element={<ZonesPage />} />
-                        <Route path="attempts" element={<AttemptsPage />} />
-                        <Route path="readers" element={<ReadersPage  />} />
-                        <Route path="readers/:id" element={<ReaderDetailsPage />} />
-                        <Route path="readers" element={<ReadersPage />} />
-                        <Route path="emulator" element={<ReaderEmulatorPage />} />
-                        <Route path="audit" element={<AuditPage />} />
-                        <Route path="timetable/batches" element={<TimetableBatchesPage />} />
-                        <Route path="timetable/import" element={<TimetableImportPage />} />
-                        <Route path="timetable/sync" element={<TimetableSyncPage />} />
                         <Route path="profile/security" element={<SecurityProfilePage />} />
+
+                        <Route element={<RequireRole roles={[appRoles.admin]} />}>
+                            <Route path="groups" element={<GroupsPage />} />
+                            <Route path="students" element={<StudentsPage />} />
+                            <Route path="students/:id" element={<StudentDetailsPage />} />
+                            <Route path="zones" element={<ZonesPage />} />
+                            <Route path="attempts" element={<AttemptsPage />} />
+                            <Route path="readers" element={<ReadersPage />} />
+                            <Route path="readers/:id" element={<ReaderDetailsPage />} />
+                            <Route path="emulator" element={<ReaderEmulatorPage />} />
+                            <Route path="audit" element={<AuditPage />} />
+                            <Route path="timetable/import" element={<TimetableImportPage />} />
+                            <Route path="timetable/batches" element={<TimetableBatchesPage />} />
+                            <Route path="timetable/sync" element={<TimetableSyncPage />} />
+                        </Route>
                     </Route>
                 </Route>
 

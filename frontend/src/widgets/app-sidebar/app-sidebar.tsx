@@ -1,15 +1,15 @@
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import ManageSearchOutlinedIcon from '@mui/icons-material/ManageSearchOutlined';
 import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
-import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
+import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
 import {
     Box,
     List,
@@ -22,6 +22,8 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
+import { useAppSelector } from '../../app/store/hooks';
+import { appRoles, hasRole } from '../../shared/auth/roles';
 
 const drawerWidth = 272;
 
@@ -43,11 +45,13 @@ const navSections = [
                 labelKey: 'navigation.groups',
                 to: '/admin/groups',
                 icon: <GroupsOutlinedIcon />,
+                adminOnly: true,
             },
             {
                 labelKey: 'navigation.students',
                 to: '/admin/students',
                 icon: <SchoolOutlinedIcon />,
+                adminOnly: true,
             },
         ],
     },
@@ -58,11 +62,13 @@ const navSections = [
                 labelKey: 'navigation.zones',
                 to: '/admin/zones',
                 icon: <LayersOutlinedIcon />,
+                adminOnly: true,
             },
             {
                 labelKey: 'navigation.attempts',
                 to: '/admin/attempts',
                 icon: <SecurityOutlinedIcon />,
+                adminOnly: true,
             },
         ],
     },
@@ -73,11 +79,13 @@ const navSections = [
                 labelKey: 'navigation.readers',
                 to: '/admin/readers',
                 icon: <MemoryOutlinedIcon />,
+                adminOnly: true,
             },
             {
                 labelKey: 'navigation.emulator',
                 to: '/admin/emulator',
                 icon: <TerminalOutlinedIcon />,
+                adminOnly: true,
             },
         ],
     },
@@ -88,16 +96,19 @@ const navSections = [
                 labelKey: 'navigation.timetableImport',
                 to: '/admin/timetable/import',
                 icon: <CalendarMonthOutlinedIcon />,
+                adminOnly: true,
             },
             {
                 labelKey: 'navigation.timetableBatches',
                 to: '/admin/timetable/batches',
                 icon: <HistoryOutlinedIcon />,
+                adminOnly: true,
             },
             {
                 labelKey: 'navigation.timetableSync',
                 to: '/admin/timetable/sync',
                 icon: <SyncOutlinedIcon />,
+                adminOnly: true,
             },
         ],
     },
@@ -108,6 +119,7 @@ const navSections = [
                 labelKey: 'navigation.audit',
                 to: '/admin/audit',
                 icon: <ManageSearchOutlinedIcon />,
+                adminOnly: true,
             },
             {
                 labelKey: 'navigation.security',
@@ -118,9 +130,23 @@ const navSections = [
     },
 ];
 
+type NavigationItem = {
+    labelKey: string;
+    to: string;
+    icon: JSX.Element;
+    adminOnly?: boolean;
+};
+
+type NavigationSection = {
+    title: string;
+    items: NavigationItem[];
+};
+
 export function AppSidebar() {
     const { t } = useTranslation();
     const theme = useTheme();
+    const user = useAppSelector((state) => state.auth.user);
+    const isAdmin = hasRole(user?.roles, appRoles.admin);
 
     return (
         <Box
@@ -159,21 +185,32 @@ export function AppSidebar() {
                     overflowY: 'auto',
                 }}
             >
-                <StackedNavigation sections={navSections} />
+                <StackedNavigation sections={navSections} isAdmin={isAdmin} />
             </Box>
         </Box>
     );
 }
 
-type NavigationSection = (typeof navSections)[number];
-
-function StackedNavigation({ sections }: { sections: NavigationSection[] }) {
+function StackedNavigation({
+                               sections,
+                               isAdmin,
+                           }: {
+    sections: NavigationSection[];
+    isAdmin: boolean;
+}) {
     const { t } = useTranslation();
     const theme = useTheme();
 
+    const visibleSections = sections
+        .map((section) => ({
+            ...section,
+            items: section.items.filter((item) => !item.adminOnly || isAdmin),
+        }))
+        .filter((section) => section.items.length > 0);
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
-            {sections.map((section) => (
+            {visibleSections.map((section) => (
                 <Box key={section.title}>
                     <Typography
                         variant="caption"
