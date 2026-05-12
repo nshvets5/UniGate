@@ -20,6 +20,7 @@ import { useAppDispatch, useAppSelector } from '../../app/store/hooks';
 import { endSession } from '../../shared/auth/auth-session';
 import { useCommandPalette } from '../command-palette/command-palette-provider';
 import { NotificationsCenter } from '../notifications-center/notifications-center';
+import { keycloak } from '../../shared/auth/keycloak';
 
 export function AppHeader() {
     const { t } = useTranslation();
@@ -32,9 +33,12 @@ export function AppHeader() {
     const locale = useAppSelector((state) => state.preferences.locale);
     const user = useAppSelector((state) => state.auth.user);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         endSession(dispatch);
-        navigate('/login', { replace: true });
+
+        await keycloak.logout({
+            redirectUri: `${window.location.origin}/login`,
+        });
     };
 
     return (
