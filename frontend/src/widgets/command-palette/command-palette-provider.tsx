@@ -10,7 +10,16 @@ import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import {
+    createContext,
+    ReactNode,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react';
+import { useAppSelector } from '../../app/store/hooks';
+import { appRoles, hasRole } from '../../shared/auth/roles';
 import { CommandPalette } from './command-palette';
 
 type CommandPaletteContextValue = {
@@ -31,6 +40,8 @@ export function useCommandPalette() {
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     const [open, setOpen] = useState(false);
+    const user = useAppSelector((state) => state.auth.user);
+    const isAdmin = hasRole(user?.roles, appRoles.admin);
 
     const commands = useMemo(
         () => [
@@ -47,6 +58,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/groups',
                 icon: <GroupsOutlinedIcon />,
                 keywords: ['directory', 'academic', 'group'],
+                adminOnly: true,
             },
             {
                 title: 'Students',
@@ -54,6 +66,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/students',
                 icon: <SchoolOutlinedIcon />,
                 keywords: ['directory', 'student', 'credentials'],
+                adminOnly: true,
             },
             {
                 title: 'Access workspace',
@@ -61,6 +74,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/zones',
                 icon: <ApartmentOutlinedIcon />,
                 keywords: ['zones', 'doors', 'rules', 'access'],
+                adminOnly: true,
             },
             {
                 title: 'Access attempts',
@@ -68,6 +82,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/attempts',
                 icon: <SecurityOutlinedIcon />,
                 keywords: ['attempts', 'scan', 'allow', 'deny'],
+                adminOnly: true,
             },
             {
                 title: 'Readers',
@@ -75,6 +90,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/readers',
                 icon: <MemoryOutlinedIcon />,
                 keywords: ['devices', 'reader', 'rfid', 'qr'],
+                adminOnly: true,
             },
             {
                 title: 'Reader emulator',
@@ -82,6 +98,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/emulator',
                 icon: <TerminalOutlinedIcon />,
                 keywords: ['emulator', 'scan', 'device'],
+                adminOnly: true,
             },
             {
                 title: 'Timetable import',
@@ -89,6 +106,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/timetable/import',
                 icon: <CalendarMonthOutlinedIcon />,
                 keywords: ['timetable', 'import', 'csv', 'ics'],
+                adminOnly: true,
             },
             {
                 title: 'Timetable batches',
@@ -96,6 +114,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/timetable/batches',
                 icon: <HistoryOutlinedIcon />,
                 keywords: ['timetable', 'batches', 'history', 'rollback'],
+                adminOnly: true,
             },
             {
                 title: 'Timetable sync',
@@ -103,6 +122,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/timetable/sync',
                 icon: <SyncOutlinedIcon />,
                 keywords: ['timetable', 'sync', 'diagnostics'],
+                adminOnly: true,
             },
             {
                 title: 'Audit log',
@@ -110,6 +130,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 path: '/admin/audit',
                 icon: <ManageSearchOutlinedIcon />,
                 keywords: ['audit', 'events', 'activity', 'log'],
+                adminOnly: true,
             },
             {
                 title: 'Security profile',
@@ -120,6 +141,11 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
             },
         ],
         []
+    );
+
+    const visibleCommands = useMemo(
+        () => commands.filter((command) => !command.adminOnly || isAdmin),
+        [commands, isAdmin]
     );
 
     useEffect(() => {
@@ -152,7 +178,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
             <CommandPalette
                 open={open}
                 onClose={() => setOpen(false)}
-                commands={commands}
+                commands={visibleCommands}
             />
         </CommandPaletteContext.Provider>
     );
