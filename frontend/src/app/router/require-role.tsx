@@ -31,7 +31,7 @@ export function RequireRole({ roles }: RequireRoleProps) {
     }
 
     if (!hasAnyRole(user?.roles, roles)) {
-        return <Navigate to="/admin/dashboard" replace />;
+        return <Navigate to="/forbidden" replace />;
     }
 
     return <Outlet />;

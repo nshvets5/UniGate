@@ -16,6 +16,7 @@ import { TimetableBatchesPage } from '../../pages/timetable-batches-page';
 import { TimetableImportPage } from '../../pages/timetable-import-page';
 import { TimetableSyncPage } from '../../pages/timetable-sync-page';
 import { SecurityProfilePage } from '../../pages/security-profile-page';
+import { ForbiddenPage } from '../../pages/forbidden-page';
 import { CommandPaletteProvider } from '../../widgets/command-palette/command-palette-provider';
 import { RequireRole } from '../router/require-role';
 import { appRoles } from '../../shared/auth/roles';
@@ -26,6 +27,7 @@ export function RouterProviderWrapper() {
             <CommandPaletteProvider>
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/forbidden" element={<ForbiddenPage />} />
                 <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
 
                 <Route element={<RequireAuth />}>
