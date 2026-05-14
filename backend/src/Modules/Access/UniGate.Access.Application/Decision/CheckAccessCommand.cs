@@ -1,3 +1,5 @@
 namespace UniGate.Access.Application.Decision;
 
-public sealed record CheckAccessCommand(Guid DoorId, Guid IamProfileId);
+public sealed record CheckAccessCommand(
+    Guid StudentId,
+    Guid DoorId);

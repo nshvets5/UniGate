@@ -4,7 +4,9 @@ namespace UniGate.Access.Application.Decision;
 
 public interface IAccessDecisionStore
 {
-    Task<Result<(Guid ZoneId, bool DoorActive, bool ZoneActive)>> GetDoorZoneAsync(Guid doorId, CancellationToken ct);
-
-    Task<Result<bool>> HasAllowedWindowAsync(Guid zoneId, Guid groupId, DateTimeOffset nowUtc, CancellationToken ct);
+    Task<Result<AccessDecisionDto>> CheckAsync(
+        Guid studentId,
+        Guid doorId,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default);
 }

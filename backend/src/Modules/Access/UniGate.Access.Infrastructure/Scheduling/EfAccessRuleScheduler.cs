@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using UniGate.Access.Domain;
@@ -5,7 +6,6 @@ using UniGate.Access.Infrastructure.Persistence;
 using UniGate.SharedKernel.Access;
 using UniGate.SharedKernel.Outbox;
 using UniGate.SharedKernel.Results;
-using System.Text.Json;
 
 namespace UniGate.Access.Infrastructure.Scheduling;
 
@@ -20,15 +20,34 @@ public sealed class EfAccessRuleScheduler : IAccessRuleScheduler
         _logger = logger;
     }
 
-    public async Task<Result<Guid>> EnsureRuleAsync(Guid zoneId, Guid groupId, CancellationToken ct = default)
+    public async Task<Result<Guid>> EnsureRuleAsync(
+        AccessTargetType targetType,
+        Guid targetId,
+        Guid groupId,
+        CancellationToken ct = default)
     {
         try
         {
-            var existing = await _db.Rules.FirstOrDefaultAsync(r => r.ZoneId == zoneId && r.GroupId == groupId, ct);
+            if (targetId == Guid.Empty || groupId == Guid.Empty)
+            {
+                return Result<Guid>.Failure(
+                    Errors.Validation.Failed("TargetId and GroupId are required."));
+            }
+
+            var existing = await _db.Rules.FirstOrDefaultAsync(
+                r => r.TargetType == targetType &&
+                     r.TargetId == targetId &&
+                     r.GroupId == groupId,
+                ct);
+
             if (existing is not null)
                 return Result<Guid>.Success(existing.Id);
 
-            var r = new AccessRule(zoneId, groupId);
+            var r = new AccessRule(
+                groupId: groupId,
+                targetType: targetType,
+                targetId: targetId);
+
             _db.Rules.Add(r);
 
             _db.OutboxMessages.Add(new OutboxMessage(
@@ -36,8 +55,9 @@ public sealed class EfAccessRuleScheduler : IAccessRuleScheduler
                 payloadJson: JsonSerializer.Serialize(new
                 {
                     ruleId = r.Id,
-                    r.ZoneId,
                     r.GroupId,
+                    r.TargetType,
+                    r.TargetId,
                     r.IsActive,
                     occurredAt = DateTimeOffset.UtcNow,
                     actorProvider = "timetable",
@@ -74,7 +94,10 @@ public sealed class EfAccessRuleScheduler : IAccessRuleScheduler
                 return Result.Failure(new Error("rule.validity_invalid", ex.Message));
             }
 
-            var existing = await _db.RuleWindows.Where(w => w.RuleId == ruleId).ToListAsync(ct);
+            var existing = await _db.RuleWindows
+                .Where(w => w.RuleId == ruleId)
+                .ToListAsync(ct);
+
             _db.RuleWindows.RemoveRange(existing);
 
             foreach (var w in schedule.Windows)
@@ -82,7 +105,14 @@ public sealed class EfAccessRuleScheduler : IAccessRuleScheduler
                 if (w.DayOfWeekIso is < 1 or > 7)
                     return Result.Failure(Errors.Validation.Failed("DayOfWeekIso must be 1..7."));
 
-                _db.RuleWindows.Add(new RuleWindow(ruleId, w.DayOfWeekIso, w.StartTime, w.EndTime));
+                if (w.StartTime == w.EndTime)
+                    return Result.Failure(Errors.Validation.Failed("StartTime and EndTime cannot be equal."));
+
+                _db.RuleWindows.Add(new RuleWindow(
+                    ruleId,
+                    w.DayOfWeekIso,
+                    w.StartTime,
+                    w.EndTime));
             }
 
             _db.OutboxMessages.Add(new OutboxMessage(
@@ -90,8 +120,9 @@ public sealed class EfAccessRuleScheduler : IAccessRuleScheduler
                 payloadJson: JsonSerializer.Serialize(new
                 {
                     ruleId = rule.Id,
-                    rule.ZoneId,
                     rule.GroupId,
+                    rule.TargetType,
+                    rule.TargetId,
                     rule.IsActive,
                     rule.ValidFrom,
                     rule.ValidTo,

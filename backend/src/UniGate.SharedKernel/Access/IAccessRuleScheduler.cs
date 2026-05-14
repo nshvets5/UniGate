@@ -11,7 +11,11 @@ public sealed record RuleScheduleV2(
 
 public interface IAccessRuleScheduler
 {
-    Task<Result<Guid>> EnsureRuleAsync(Guid zoneId, Guid groupId, CancellationToken ct = default);
+    Task<Result<Guid>> EnsureRuleAsync(
+        AccessTargetType targetType,
+        Guid targetId,
+        Guid groupId,
+        CancellationToken ct = default);
 
     Task<Result> ReplaceWindowsAsync(Guid ruleId, RuleScheduleV2 schedule, CancellationToken ct = default);
 }

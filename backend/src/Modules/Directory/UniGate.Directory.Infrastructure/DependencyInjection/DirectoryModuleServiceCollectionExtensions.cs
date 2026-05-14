@@ -66,6 +66,7 @@ public static class DirectoryModuleServiceCollectionExtensions
         services.AddScoped<ListStudentCredentialsUseCase>();
         services.AddScoped<SetStudentCredentialActiveUseCase>();
         services.AddScoped<IStudentCredentialLookup, EfStudentCredentialLookup>();
+        services.AddScoped<IStudentGroupLookup, EfStudentGroupLookup>();
 
         return services;
     }

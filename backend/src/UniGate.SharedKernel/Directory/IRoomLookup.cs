@@ -6,7 +6,7 @@ public sealed record RoomRef(
     Guid RoomId,
     string Code,
     string Name,
-    Guid ZoneId,
+    Guid AccessZoneId,
     bool IsActive);
 
 public interface IRoomLookup

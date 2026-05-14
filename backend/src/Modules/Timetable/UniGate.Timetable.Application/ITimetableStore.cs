@@ -23,6 +23,7 @@ public interface ITimetableStore
 
 public sealed record ImportSlotRow(
     Guid GroupId,
+    Guid RoomId,
     Guid ZoneId,
     int DayOfWeekIso,
     TimeOnly StartTime,

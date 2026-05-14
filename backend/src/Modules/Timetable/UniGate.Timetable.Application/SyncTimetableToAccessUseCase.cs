@@ -25,26 +25,29 @@ public sealed class SyncTimetableToAccessUseCase
             .ToList();
 
         var groups = slots
-            .GroupBy(s => (s.ZoneId, s.GroupId))
+            .GroupBy(s => (TargetType: AccessTargetType.Room, TargetId: s.RoomId, s.GroupId))
             .ToList();
 
         var updated = 0;
 
         foreach (var g in groups)
         {
-            var zoneId = g.Key.ZoneId;
-            var groupId = g.Key.GroupId;
-
             var windows = g
                 .Select(s => new RuleWindowDto(s.DayOfWeekIso, s.StartTime, s.EndTime))
                 .Distinct()
-                .OrderBy(w => w.DayOfWeekIso).ThenBy(w => w.StartTime)
+                .OrderBy(w => w.DayOfWeekIso)
+                .ThenBy(w => w.StartTime)
                 .ToList();
 
             var validFrom = g.Select(x => x.ValidFrom).Where(x => x is not null).Min();
             var validTo = g.Select(x => x.ValidTo).Where(x => x is not null).Max();
 
-            var ensure = await _scheduler.EnsureRuleAsync(zoneId, groupId, ct);
+            var ensure = await _scheduler.EnsureRuleAsync(
+                targetType: g.Key.TargetType,
+                targetId: g.Key.TargetId,
+                groupId: g.Key.GroupId,
+                ct: ct);
+
             if (!ensure.IsSuccess)
                 return Result<int>.Failure(ensure.Error);
 

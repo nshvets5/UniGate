@@ -11,8 +11,11 @@ public sealed class CreateRuleUseCase
 
     public Task<Result<Guid>> ExecuteAsync(CreateRuleCommand cmd, CancellationToken ct)
     {
-        if (cmd.ZoneId == Guid.Empty || cmd.GroupId == Guid.Empty)
-            return Task.FromResult(Result<Guid>.Failure(Errors.Validation.Failed("ZoneId and GroupId are required.")));
+        if (cmd.GroupId == Guid.Empty || cmd.TargetId == Guid.Empty)
+        {
+            return Task.FromResult(Result<Guid>.Failure(
+                Errors.Validation.Failed("GroupId and TargetId are required.")));
+        }
 
         return _store.CreateRuleAsync(cmd, ct);
     }

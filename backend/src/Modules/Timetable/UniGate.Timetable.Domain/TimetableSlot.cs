@@ -6,6 +6,8 @@ public sealed class TimetableSlot
 
     public Guid BatchId { get; private set; }
     public Guid GroupId { get; private set; }
+
+    public Guid RoomId { get; private set; }
     public Guid ZoneId { get; private set; }
 
     public int DayOfWeekIso { get; private set; }
@@ -26,6 +28,7 @@ public sealed class TimetableSlot
     public TimetableSlot(
         Guid batchId,
         Guid groupId,
+        Guid roomId,
         Guid zoneId,
         int dayOfWeekIso,
         TimeOnly start,
@@ -36,6 +39,7 @@ public sealed class TimetableSlot
     {
         BatchId = batchId;
         GroupId = groupId;
+        RoomId = roomId;
         ZoneId = zoneId;
         DayOfWeekIso = dayOfWeekIso;
         StartTime = start;

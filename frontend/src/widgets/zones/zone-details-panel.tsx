@@ -7,64 +7,58 @@ import {
     CircularProgress,
     Divider,
     Stack,
+    Tab,
+    Tabs,
     Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { useState } from 'react';
 import type { ZoneDto } from '../../entities/zone/types';
 import { CodeBadge } from '../../shared/ui/code-badge';
+import { EmptyState } from '../../shared/ui/empty-state';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
-import { ZoneSummaryCards } from './zone-summary-cards';
 import { ZoneDoorsSection } from './zone-doors-section';
 import { ZoneRulesSection } from './zone-rules-section';
 
-type ZoneDetailsPanelProps = {
+type Props = {
     zone: ZoneDto | null;
     onEdit: (zone: ZoneDto) => void;
     onToggleActive: (zone: ZoneDto) => void;
-    isTogglePending?: boolean;
+    isTogglePending: boolean;
 };
 
 export function ZoneDetailsPanel({
                                      zone,
                                      onEdit,
                                      onToggleActive,
-                                     isTogglePending = false,
-                                 }: ZoneDetailsPanelProps) {
+                                     isTogglePending,
+                                 }: Props) {
     const theme = useTheme();
+    const [tab, setTab] = useState<'overview' | 'doors' | 'rules'>('overview');
 
     if (!zone) {
         return (
-            <SectionCard
-                sx={{
-                    minHeight: 640,
-                    display: 'grid',
-                    placeItems: 'center',
-                }}
-            >
-                <Stack spacing={1.5} alignItems="center" textAlign="center">
-                    <Typography variant="h6">Select a zone</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420 }}>
-                        Choose a zone from the left panel to inspect its details, lifecycle state and related infrastructure.
-                    </Typography>
-                </Stack>
+            <SectionCard>
+                <EmptyState
+                    title="No zone selected"
+                    description="Select a zone from the access tree to manage its doors and access policies."
+                />
             </SectionCard>
         );
     }
 
     return (
-        <Stack spacing={2.5}>
-            <SectionCard>
-                <Stack spacing={2.5}>
+        <Stack spacing={3}>
+            <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
+                <Box sx={{ p: 3 }}>
                     <Stack
-                        direction={{ xs: 'column', lg: 'row' }}
+                        direction={{ xs: 'column', md: 'row' }}
                         justifyContent="space-between"
-                        alignItems={{ xs: 'flex-start', lg: 'flex-start' }}
+                        alignItems={{ xs: 'flex-start', md: 'center' }}
                         gap={2}
                     >
-                        <Stack spacing={1.25}>
-                            <Typography variant="h5">{zone.name}</Typography>
-
+                        <Stack spacing={1}>
                             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                 <CodeBadge value={zone.code} />
                                 <StatusChip
@@ -73,9 +67,14 @@ export function ZoneDetailsPanel({
                                 />
                             </Stack>
 
-                            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 760 }}>
-                                {zone.description || 'No description provided for this zone.'}
-                            </Typography>
+                            <Stack spacing={0.5}>
+                                <Typography variant="h5" fontWeight={800}>
+                                    {zone.name}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Selected access zone workspace.
+                                </Typography>
+                            </Stack>
                         </Stack>
 
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -84,7 +83,7 @@ export function ZoneDetailsPanel({
                                 startIcon={<EditOutlinedIcon />}
                                 onClick={() => onEdit(zone)}
                             >
-                                Edit
+                                Edit zone
                             </Button>
 
                             <Button
@@ -92,7 +91,7 @@ export function ZoneDetailsPanel({
                                 color={zone.isActive ? 'warning' : 'success'}
                                 startIcon={
                                     isTogglePending ? (
-                                        <CircularProgress size={18} />
+                                        <CircularProgress size={16} />
                                     ) : zone.isActive ? (
                                         <PauseCircleOutlineOutlinedIcon />
                                     ) : (
@@ -106,50 +105,99 @@ export function ZoneDetailsPanel({
                             </Button>
                         </Stack>
                     </Stack>
+                </Box>
 
-                    <Divider />
+                <Divider />
 
-                    <Stack
-                        direction={{ xs: 'column', md: 'row' }}
-                        spacing={2}
-                        useFlexGap
-                        flexWrap="wrap"
-                    >
-                        <Typography variant="body2" color="text.secondary">
-                            Created: {new Date(zone.createdAt).toLocaleString()}
-                        </Typography>
+                <Tabs
+                    value={tab}
+                    onChange={(_, value) => setTab(value)}
+                    sx={{
+                        px: 2,
+                        minHeight: 52,
+                        '& .MuiTab-root': {
+                            minHeight: 52,
+                            textTransform: 'none',
+                            fontWeight: 700,
+                        },
+                    }}
+                >
+                    <Tab value="overview" label="Overview" />
+                    <Tab value="doors" label="Doors" />
+                    <Tab value="rules" label="Rules" />
+                </Tabs>
+            </SectionCard>
+
+            {tab === 'overview' ? (
+                <SectionCard>
+                    <Stack spacing={2.5}>
+                        <Typography variant="subtitle1">Zone overview</Typography>
 
                         <Box
                             sx={{
-                                width: 4,
-                                height: 4,
-                                borderRadius: '50%',
-                                bgcolor: alpha(theme.palette.text.secondary, 0.5),
-                                display: { xs: 'none', md: 'block' },
-                                alignSelf: 'center',
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                                gap: 2,
                             }}
-                        />
+                        >
+                            <OverviewMetric label="Zone code" value={zone.code} />
+                            <OverviewMetric
+                                label="Lifecycle state"
+                                value={zone.isActive ? 'Active' : 'Inactive'}
+                            />
+                            <OverviewMetric
+                                label="Created"
+                                value={
+                                    'createdAt' in zone
+                                        ? new Date(zone.createdAt as string).toLocaleDateString()
+                                        : '—'
+                                }
+                            />
+                        </Box>
 
-                        <Typography variant="body2" color="text.secondary">
-                            Workspace view for access infrastructure
-                        </Typography>
+                        <Box
+                            sx={{
+                                p: 2.5,
+                                borderRadius: 3,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                bgcolor: alpha(theme.palette.primary.main, 0.035),
+                            }}
+                        >
+                            <Typography variant="body2" color="text.secondary">
+                                Use the tabs above to manage physical doors and access policies
+                                assigned to this zone. This layout keeps the zone workspace focused
+                                while still keeping all related infrastructure in one place.
+                            </Typography>
+                        </Box>
                     </Stack>
-                </Stack>
-            </SectionCard>
+                </SectionCard>
+            ) : null}
 
-            <ZoneSummaryCards />
+            {tab === 'doors' ? <ZoneDoorsSection zone={zone} /> : null}
 
-            <SectionCard>
-                <Stack spacing={1}>
-                    <Typography variant="subtitle1">Zone workspace</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        This panel will host embedded sections for doors, readers and access rules related to the selected zone.
-                    </Typography>
-                </Stack>
-            </SectionCard>
-
-            <ZoneDoorsSection zone={zone} />
-            <ZoneRulesSection zone={zone} />
+            {tab === 'rules' ? <ZoneRulesSection zone={zone} /> : null}
         </Stack>
+    );
+}
+
+function OverviewMetric({ label, value }: { label: string; value: string }) {
+    return (
+        <Box
+            sx={{
+                p: 2,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+            }}
+        >
+            <Typography variant="body2" color="text.secondary">
+                {label}
+            </Typography>
+            <Typography variant="h6" sx={{ mt: 0.75 }} noWrap>
+                {value}
+            </Typography>
+        </Box>
     );
 }

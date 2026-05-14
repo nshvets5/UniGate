@@ -61,7 +61,8 @@ public sealed class ImportTimetableUseCase
 
             validRows.Add(new ImportSlotRow(
                 GroupId: s.GroupId.Value,
-                ZoneId: roomRes.Value.ZoneId,
+                RoomId: roomRes.Value.RoomId,
+                ZoneId: roomRes.Value.AccessZoneId,
                 DayOfWeekIso: s.DayOfWeekIso,
                 StartTime: s.StartTime,
                 EndTime: s.EndTime,

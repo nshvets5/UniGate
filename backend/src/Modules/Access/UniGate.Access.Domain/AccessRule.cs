@@ -1,11 +1,15 @@
+using UniGate.SharedKernel.Access;
+
 namespace UniGate.Access.Domain;
 
 public sealed class AccessRule
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
 
-    public Guid ZoneId { get; private set; }
     public Guid GroupId { get; private set; }
+
+    public AccessTargetType TargetType { get; private set; }
+    public Guid TargetId { get; private set; }
 
     public bool IsActive { get; private set; } = true;
 
@@ -16,12 +20,31 @@ public sealed class AccessRule
 
     private AccessRule() { }
 
-    public AccessRule(Guid zoneId, Guid groupId)
+    public AccessRule(
+        Guid groupId,
+        AccessTargetType targetType,
+        Guid targetId)
     {
-        ZoneId = zoneId;
+        if (groupId == Guid.Empty)
+            throw new InvalidOperationException("GroupId is required.");
+
+        if (targetId == Guid.Empty)
+            throw new InvalidOperationException("TargetId is required.");
+
         GroupId = groupId;
+        TargetType = targetType;
+        TargetId = targetId;
         IsActive = true;
         CreatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void ChangeTarget(AccessTargetType targetType, Guid targetId)
+    {
+        if (targetId == Guid.Empty)
+            throw new InvalidOperationException("TargetId is required.");
+
+        TargetType = targetType;
+        TargetId = targetId;
     }
 
     public void SetActive(bool isActive) => IsActive = isActive;

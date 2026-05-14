@@ -1,15 +1,15 @@
-import { Grid } from '@mui/material';
+import { Box } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import type { ZoneDto } from '../entities/zone/types';
-import { useZonesQuery } from '../features/zones/list-zones/use-zones-query';
 import { CreateZoneDialog } from '../features/zones/create-zone/create-zone-dialog';
+import { useZonesQuery } from '../features/zones/list-zones/use-zones-query';
 import { useToggleZoneActiveMutation } from '../features/zones/toggle-zone-active/use-toggle-zone-active-mutation';
 import { UpdateZoneDialog } from '../features/zones/update-zone/update-zone-dialog';
+import { ErrorState } from '../shared/ui/error-state';
 import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
-import { ErrorState } from '../shared/ui/error-state';
+import { ZoneAccessTreePanel } from '../widgets/zones/zone-access-tree-panel';
 import { ZoneDetailsPanel } from '../widgets/zones/zone-details-panel';
-import { ZoneListPanel } from '../widgets/zones/zone-list-panel';
 
 export function ZonesPage() {
     const [search, setSearch] = useState('');
@@ -44,8 +44,7 @@ export function ZonesPage() {
         }
     }, [zones, selectedZoneId]);
 
-    const selectedZone =
-        zones.find((zone) => zone.id === selectedZoneId) ?? null;
+    const selectedZone = zones.find((zone) => zone.id === selectedZoneId) ?? null;
 
     const handleToggleActive = async (zone: ZoneDto) => {
         await toggleMutation.mutateAsync({
@@ -58,12 +57,13 @@ export function ZonesPage() {
         return (
             <PageContainer>
                 <PageHeader
-                    title="Zones"
-                    subtitle="Manage physical access zones and workspace structure."
+                    title="Access workspace"
+                    subtitle="Manage zones, doors and access rules from a structured workspace."
                 />
+
                 <ErrorState
                     title="Failed to load zones"
-                    description="The zones workspace could not be loaded from the server."
+                    description="The access workspace could not be loaded from the server."
                     onRetry={() => void zonesQuery.refetch()}
                 />
             </PageContainer>
@@ -73,35 +73,41 @@ export function ZonesPage() {
     return (
         <PageContainer>
             <PageHeader
-                title="Zones"
-                subtitle="Workspace for physical access zones, spatial structure and infrastructure context."
+                title="Access workspace"
+                subtitle="Structured view for zones, physical entry points and access policies."
             />
 
-            <Grid container spacing={3}>
-                <Grid size={{ xs: 12, xl: 4 }}>
-                    <ZoneListPanel
-                        zones={zones}
-                        selectedZoneId={selectedZoneId}
-                        search={search}
-                        onSearchChange={setSearch}
-                        onCreateClick={() => setCreateOpen(true)}
-                        onSelectZone={(zone) => setSelectedZoneId(zone.id)}
-                        isLoading={zonesQuery.isLoading}
-                    />
-                </Grid>
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: '1fr',
+                        xl: '380px minmax(0, 1fr)',
+                    },
+                    gap: 3,
+                    alignItems: 'start',
+                }}
+            >
+                <ZoneAccessTreePanel
+                    zones={zones}
+                    selectedZoneId={selectedZoneId}
+                    search={search}
+                    isLoading={zonesQuery.isLoading}
+                    onSearchChange={setSearch}
+                    onCreateClick={() => setCreateOpen(true)}
+                    onSelectZone={(zone) => setSelectedZoneId(zone.id)}
+                />
 
-                <Grid size={{ xs: 12, xl: 8 }}>
-                    <ZoneDetailsPanel
-                        zone={selectedZone}
-                        onEdit={(zone) => setEditingZone(zone)}
-                        onToggleActive={(zone) => void handleToggleActive(zone)}
-                        isTogglePending={
-                            toggleMutation.isPending &&
-                            toggleMutation.variables?.id === selectedZone?.id
-                        }
-                    />
-                </Grid>
-            </Grid>
+                <ZoneDetailsPanel
+                    zone={selectedZone}
+                    onEdit={(zone) => setEditingZone(zone)}
+                    onToggleActive={(zone) => void handleToggleActive(zone)}
+                    isTogglePending={
+                        toggleMutation.isPending &&
+                        toggleMutation.variables?.id === selectedZone?.id
+                    }
+                />
+            </Box>
 
             <CreateZoneDialog
                 open={createOpen}

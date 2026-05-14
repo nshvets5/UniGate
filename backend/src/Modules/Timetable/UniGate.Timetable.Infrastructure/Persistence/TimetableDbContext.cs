@@ -46,7 +46,10 @@ public sealed class TimetableDbContext : DbContext
 
             b.Property(x => x.BatchId).IsRequired();
             b.Property(x => x.GroupId).IsRequired();
+
+            b.Property(x => x.RoomId).IsRequired();
             b.Property(x => x.ZoneId).IsRequired();
+
             b.Property(x => x.DayOfWeekIso).IsRequired();
             b.Property(x => x.StartTime).IsRequired();
             b.Property(x => x.EndTime).IsRequired();
@@ -59,7 +62,9 @@ public sealed class TimetableDbContext : DbContext
             b.Property(x => x.CreatedAt).IsRequired();
 
             b.HasIndex(x => x.BatchId);
-            b.HasIndex(x => new { x.GroupId, x.ZoneId, x.DayOfWeekIso, x.StartTime, x.EndTime });
+            b.HasIndex(x => x.RoomId);
+            b.HasIndex(x => x.ZoneId);
+            b.HasIndex(x => new { x.GroupId, x.RoomId, x.DayOfWeekIso, x.StartTime, x.EndTime });
 
             b.HasOne<TimetableImportBatch>()
                 .WithMany()

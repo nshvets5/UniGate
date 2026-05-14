@@ -22,10 +22,12 @@ public sealed class AccessDbContext : DbContext
         {
             b.ToTable("zones");
             b.HasKey(x => x.Id);
+
             b.Property(x => x.Code).HasMaxLength(50).IsRequired();
             b.Property(x => x.Name).HasMaxLength(200).IsRequired();
             b.Property(x => x.IsActive).IsRequired();
             b.Property(x => x.CreatedAt).IsRequired();
+
             b.HasIndex(x => x.Code).IsUnique();
         });
 
@@ -33,13 +35,18 @@ public sealed class AccessDbContext : DbContext
         {
             b.ToTable("doors");
             b.HasKey(x => x.Id);
+
             b.Property(x => x.ZoneId).IsRequired();
+            b.Property(x => x.RoomId);
+
             b.Property(x => x.Code).HasMaxLength(50).IsRequired();
             b.Property(x => x.Name).HasMaxLength(200).IsRequired();
             b.Property(x => x.IsActive).IsRequired();
             b.Property(x => x.CreatedAt).IsRequired();
+
             b.HasIndex(x => x.Code).IsUnique();
             b.HasIndex(x => x.ZoneId);
+            b.HasIndex(x => x.RoomId);
 
             b.HasOne<Zone>()
                 .WithMany()
@@ -51,21 +58,24 @@ public sealed class AccessDbContext : DbContext
         {
             b.ToTable("rules");
             b.HasKey(x => x.Id);
-            b.Property(x => x.ZoneId).IsRequired();
+
             b.Property(x => x.GroupId).IsRequired();
+
+            b.Property(x => x.TargetType)
+                .HasConversion<int>()
+                .IsRequired();
+
+            b.Property(x => x.TargetId).IsRequired();
+
             b.Property(x => x.IsActive).IsRequired();
             b.Property(x => x.CreatedAt).IsRequired();
 
             b.Property(x => x.ValidFrom);
             b.Property(x => x.ValidTo);
 
-            b.HasIndex(x => new { x.ZoneId, x.GroupId }).IsUnique();
             b.HasIndex(x => x.GroupId);
-
-            b.HasOne<Zone>()
-                .WithMany()
-                .HasForeignKey(x => x.ZoneId)
-                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.TargetType, x.TargetId });
+            b.HasIndex(x => new { x.GroupId, x.TargetType, x.TargetId }).IsUnique();
         });
 
         modelBuilder.Entity<RuleWindow>(b =>

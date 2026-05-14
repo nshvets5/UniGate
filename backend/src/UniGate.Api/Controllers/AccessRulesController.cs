@@ -46,15 +46,27 @@ public sealed class AccessRulesController : ApiControllerBase
         CancellationToken ct = default)
         => ToActionResult(await _list.ExecuteAsync(zoneId, groupId, isActive, page, pageSize, ct));
 
-public sealed record UpdateScheduleRequest(
-    List<RuleWindowDto> Windows,
-    DateTimeOffset? ValidFrom,
-    DateTimeOffset? ValidTo);
+    public sealed record UpdateScheduleRequest(
+        AccessTargetType TargetType,
+        Guid TargetId,
+        List<RuleWindowDto> Windows,
+        DateTimeOffset? ValidFrom,
+        DateTimeOffset? ValidTo);
 
     [HttpPatch("{id:guid}/schedule")]
-    public async Task<IActionResult> UpdateSchedule([FromRoute] Guid id, [FromBody] UpdateScheduleRequest req, CancellationToken ct)
+    public async Task<IActionResult> UpdateSchedule(
+        [FromRoute] Guid id,
+        [FromBody] UpdateScheduleRequest req,
+        CancellationToken ct)
     {
-        var cmd = new UpdateRuleScheduleCommand(id, req.Windows, req.ValidFrom, req.ValidTo);
+        var cmd = new UpdateRuleScheduleCommand(
+            Id: id,
+            TargetType: req.TargetType,
+            TargetId: req.TargetId,
+            Windows: req.Windows,
+            ValidFrom: req.ValidFrom,
+            ValidTo: req.ValidTo);
+
         return ToActionResult(await _schedule.ExecuteAsync(cmd, ct));
     }
 

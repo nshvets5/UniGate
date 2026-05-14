@@ -57,6 +57,7 @@ public sealed class EfTimetableStore : ITimetableStore
                 _db.Slots.Add(new TimetableSlot(
                     batch.Id,
                     r.GroupId,
+                    r.RoomId,
                     r.ZoneId,
                     r.DayOfWeekIso,
                     r.StartTime,
@@ -112,6 +113,7 @@ public sealed class EfTimetableStore : ITimetableStore
                 .Take(take)
                 .Select(x => new ImportSlotRow(
                     x.GroupId,
+                    x.RoomId,
                     x.ZoneId,
                     x.DayOfWeekIso,
                     x.StartTime,

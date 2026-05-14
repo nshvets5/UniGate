@@ -190,6 +190,9 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
     {
         try
         {
+            if (cmd.ZoneId == Guid.Empty)
+                return Result<Guid>.Failure(Errors.Validation.Failed("ZoneId is required."));
+
             var zoneExists = await _db.Zones.AsNoTracking().AnyAsync(z => z.Id == cmd.ZoneId, ct);
             if (!zoneExists)
                 return Result<Guid>.Failure(new Error("door.zone_not_found", "Zone not found."));
@@ -199,13 +202,14 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             if (exists)
                 return Result<Guid>.Failure(new Error("door.duplicate_code", "Door code already exists."));
 
-            var d = new Door(cmd.ZoneId, code, cmd.Name.Trim());
+            var d = new Door(cmd.ZoneId, cmd.RoomId, code, cmd.Name.Trim());
             _db.Doors.Add(d);
 
             Emit(AccessOutboxTypes.DoorCreated, new
             {
                 doorId = d.Id,
                 d.ZoneId,
+                d.RoomId,
                 d.Code,
                 d.Name,
                 d.IsActive,
@@ -227,6 +231,7 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
         try
         {
             var q = _db.Doors.AsNoTracking().AsQueryable();
+
             if (zoneId is not null)
                 q = q.Where(x => x.ZoneId == zoneId.Value);
 
@@ -240,7 +245,7 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
 
             var total = await q.LongCountAsync(ct);
             var items = await q.Skip((page - 1) * pageSize).Take(pageSize)
-                .Select(x => new DoorDto(x.Id, x.ZoneId, x.Code, x.Name, x.IsActive, x.CreatedAt))
+                .Select(x => new DoorDto(x.Id, x.ZoneId, x.RoomId, x.Code, x.Name, x.IsActive, x.CreatedAt))
                 .ToListAsync(ct);
 
             return Result<PagedResult<DoorDto>>.Success(new PagedResult<DoorDto>(items, page, pageSize, total));
@@ -258,7 +263,7 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
         {
             var d = await _db.Doors.AsNoTracking()
                 .Where(x => x.Id == id)
-                .Select(x => new DoorDto(x.Id, x.ZoneId, x.Code, x.Name, x.IsActive, x.CreatedAt))
+                .Select(x => new DoorDto(x.Id, x.ZoneId, x.RoomId, x.Code, x.Name, x.IsActive, x.CreatedAt))
                 .FirstOrDefaultAsync(ct);
 
             return d is null
@@ -294,15 +299,14 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
                 d.ChangeCode(newCode);
             }
 
-            if (d.ZoneId != cmd.ZoneId)
-                d.MoveToZone(cmd.ZoneId);
-
+            d.Move(cmd.ZoneId, cmd.RoomId);
             d.Rename(cmd.Name.Trim());
 
             Emit(AccessOutboxTypes.DoorUpdated, new
             {
                 doorId = d.Id,
                 d.ZoneId,
+                d.RoomId,
                 d.Code,
                 d.Name,
                 d.IsActive,
@@ -333,6 +337,7 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             {
                 doorId = d.Id,
                 d.ZoneId,
+                d.RoomId,
                 d.Code,
                 d.Name,
                 d.IsActive,
@@ -354,8 +359,8 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
     {
         try
         {
-            if (cmd.ZoneId == Guid.Empty || cmd.GroupId == Guid.Empty)
-                return Result<Guid>.Failure(Errors.Validation.Failed("ZoneId and GroupId are required."));
+            if (cmd.TargetId == Guid.Empty || cmd.GroupId == Guid.Empty)
+                return Result<Guid>.Failure(Errors.Validation.Failed("TargetId and GroupId are required."));
 
             if (cmd.Windows is null || cmd.Windows.Count == 0)
                 return Result<Guid>.Failure(Errors.Validation.Failed("At least one window is required."));
@@ -372,17 +377,13 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             if (cmd.ValidFrom is not null && cmd.ValidTo is not null && cmd.ValidTo < cmd.ValidFrom)
                 return Result<Guid>.Failure(Errors.Validation.Failed("ValidTo must be >= ValidFrom."));
 
-            var zoneExists = await _db.Zones.AsNoTracking().AnyAsync(z => z.Id == cmd.ZoneId, ct);
-            if (!zoneExists)
-                return Result<Guid>.Failure(new Error("rule.zone_not_found", "Zone not found."));
-
             var exists = await _db.Rules.AsNoTracking()
-                .AnyAsync(r => r.ZoneId == cmd.ZoneId && r.GroupId == cmd.GroupId, ct);
+                .AnyAsync(r => r.TargetType == cmd.TargetType && r.TargetId == cmd.TargetId && r.GroupId == cmd.GroupId, ct);
 
             if (exists)
-                return Result<Guid>.Failure(new Error("rule.duplicate", "Rule for this zone and group already exists."));
+                return Result<Guid>.Failure(new Error("rule.duplicate", "Rule for this target and group already exists."));
 
-            var rule = new AccessRule(cmd.ZoneId, cmd.GroupId);
+            var rule = new AccessRule(cmd.GroupId, cmd.TargetType, cmd.TargetId);
 
             try
             {
@@ -396,15 +397,14 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             _db.Rules.Add(rule);
 
             foreach (var w in cmd.Windows)
-            {
                 _db.RuleWindows.Add(new RuleWindow(rule.Id, w.DayOfWeekIso, w.StartTime, w.EndTime));
-            }
 
             Emit(AccessOutboxTypes.RuleCreated, new
             {
                 ruleId = rule.Id,
-                rule.ZoneId,
                 rule.GroupId,
+                rule.TargetType,
+                rule.TargetId,
                 rule.IsActive,
                 rule.ValidFrom,
                 rule.ValidTo,
@@ -432,15 +432,29 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
         try
         {
             var q = _db.Rules.AsNoTracking().AsQueryable();
-            if (zoneId is not null) q = q.Where(x => x.ZoneId == zoneId.Value);
-            if (groupId is not null) q = q.Where(x => x.GroupId == groupId.Value);
-            if (isActive is not null) q = q.Where(x => x.IsActive == isActive.Value);
+
+            if (zoneId is not null)
+                q = q.Where(x => x.TargetType == UniGate.SharedKernel.Access.AccessTargetType.Zone && x.TargetId == zoneId.Value);
+
+            if (groupId is not null)
+                q = q.Where(x => x.GroupId == groupId.Value);
+
+            if (isActive is not null)
+                q = q.Where(x => x.IsActive == isActive.Value);
 
             q = q.OrderByDescending(x => x.CreatedAt);
 
             var total = await q.LongCountAsync(ct);
             var items = await q.Skip((page - 1) * pageSize).Take(pageSize)
-                .Select(x => new RuleDto(x.Id, x.ZoneId, x.GroupId, x.IsActive, x.CreatedAt))
+                .Select(x => new RuleDto(
+                    x.Id,
+                    x.GroupId,
+                    x.TargetType,
+                    x.TargetId,
+                    x.IsActive,
+                    x.ValidFrom,
+                    x.ValidTo,
+                    x.CreatedAt))
                 .ToListAsync(ct);
 
             return Result<PagedResult<RuleDto>>.Success(new PagedResult<RuleDto>(items, page, pageSize, total));
@@ -458,6 +472,9 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
         {
             if (cmd.Id == Guid.Empty)
                 return Result.Failure(Errors.Validation.Failed("Id is required."));
+
+            if (cmd.TargetId == Guid.Empty)
+                return Result.Failure(Errors.Validation.Failed("TargetId is required."));
 
             if (cmd.Windows is null || cmd.Windows.Count == 0)
                 return Result.Failure(Errors.Validation.Failed("At least one window is required."));
@@ -478,14 +495,26 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             if (r is null)
                 return Result.Failure(new Error("rule.not_found", "Rule not found."));
 
+            var duplicate = await _db.Rules.AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id != cmd.Id &&
+                    x.GroupId == r.GroupId &&
+                    x.TargetType == cmd.TargetType &&
+                    x.TargetId == cmd.TargetId,
+                    ct);
+
+            if (duplicate)
+                return Result.Failure(new Error("rule.duplicate", "Rule for this target and group already exists."));
+
             try
             {
+                r.ChangeTarget(cmd.TargetType, cmd.TargetId);
                 r.SetValidity(cmd.ValidFrom, cmd.ValidTo);
                 r.SetActive(true);
             }
             catch (InvalidOperationException ex)
             {
-                return Result.Failure(new Error("rule.validity_invalid", ex.Message));
+                return Result.Failure(new Error("rule.invalid", ex.Message));
             }
 
             var existing = await _db.RuleWindows
@@ -495,15 +524,14 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             _db.RuleWindows.RemoveRange(existing);
 
             foreach (var w in cmd.Windows)
-            {
                 _db.RuleWindows.Add(new RuleWindow(r.Id, w.DayOfWeekIso, w.StartTime, w.EndTime));
-            }
 
             Emit(AccessOutboxTypes.RuleUpdatedSchedule, new
             {
                 ruleId = r.Id,
-                r.ZoneId,
                 r.GroupId,
+                r.TargetType,
+                r.TargetId,
                 r.IsActive,
                 r.ValidFrom,
                 r.ValidTo,
@@ -539,8 +567,9 @@ public sealed class EfAccessAdminStore : IAccessAdminStore
             Emit(AccessOutboxTypes.RuleActiveChanged, new
             {
                 ruleId = r.Id,
-                r.ZoneId,
                 r.GroupId,
+                r.TargetType,
+                r.TargetId,
                 r.IsActive,
                 Actor = Actor()
             });
