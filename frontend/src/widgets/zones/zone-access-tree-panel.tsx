@@ -17,6 +17,8 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo } from 'react';
 import { AccessTargetType } from '../../entities/access-rule/types';
+import type { DoorDto } from '../../entities/door/types';
+import type { RoomDto } from '../../entities/room/api';
 import type { ZoneDto } from '../../entities/zone/types';
 import { useAccessRulesQuery } from '../../features/access-rules/list-access-rules/use-access-rules-query';
 import { useDoorsQuery } from '../../features/doors/list-doors/use-doors-query';
@@ -45,59 +47,70 @@ export function ZoneAccessTreePanel({
                                     }: Props) {
     const theme = useTheme();
 
-    const roomsQuery = useRoomsQuery({ page: 1, pageSize: 200 });
-    const doorsQuery = useDoorsQuery({ page: 1, pageSize: 200 });
-    const rulesQuery = useAccessRulesQuery({ page: 1, pageSize: 200 });
+    const roomsQuery = useRoomsQuery({ page: 1, pageSize: 100 });
+    const doorsQuery = useDoorsQuery({ page: 1, pageSize: 100 });
+    const rulesQuery = useAccessRulesQuery({
+        isActive: undefined,
+        page: 1,
+        pageSize: 100,
+    });
 
     const rooms = roomsQuery.data?.items ?? [];
     const doors = doorsQuery.data?.items ?? [];
     const rules = rulesQuery.data?.items ?? [];
 
-    const statsByZone = useMemo(() => {
-        return zones.reduce<Record<string, { rooms: number; doors: number; rules: number }>>(
-            (acc, zone) => {
-                const zoneRooms = rooms.filter((room) => room.zoneId === zone.id);
-                const zoneDoors = doors.filter((door) => door.zoneId === zone.id);
+    const treeByZone = useMemo(() => {
+        return zones.reduce<
+            Record<
+                string,
+                {
+                    rooms: RoomDto[];
+                    doors: DoorDto[];
+                    zoneDoors: DoorDto[];
+                    rules: {
+                        zone: number;
+                        room: number;
+                        door: number;
+                    };
+                }
+            >
+        >((acc, zone) => {
+            const zoneRooms = rooms.filter((room) => room.zoneId === zone.id);
+            const zoneDoors = doors.filter((door) => door.zoneId === zone.id);
+            const zoneLevelDoors = zoneDoors.filter((door) => !door.roomId);
 
-                const roomIds = new Set(zoneRooms.map((room) => room.id));
-                const doorIds = new Set(zoneDoors.map((door) => door.id));
+            const roomIds = new Set(zoneRooms.map((room) => room.id));
+            const doorIds = new Set(zoneDoors.map((door) => door.id));
 
-                const zoneRules = rules.filter((rule) => {
-                    if (
-                        rule.targetType === AccessTargetType.Zone &&
-                        rule.targetId === zone.id
-                    ) {
-                        return true;
-                    }
+            acc[zone.id] = {
+                rooms: zoneRooms,
+                doors: zoneDoors,
+                zoneDoors: zoneLevelDoors,
+                rules: {
+                    zone: rules.filter(
+                        (rule) =>
+                            rule.targetType === AccessTargetType.Zone &&
+                            rule.targetId === zone.id
+                    ).length,
+                    room: rules.filter(
+                        (rule) =>
+                            rule.targetType === AccessTargetType.Room &&
+                            roomIds.has(rule.targetId)
+                    ).length,
+                    door: rules.filter(
+                        (rule) =>
+                            rule.targetType === AccessTargetType.Door &&
+                            doorIds.has(rule.targetId)
+                    ).length,
+                },
+            };
 
-                    if (
-                        rule.targetType === AccessTargetType.Room &&
-                        roomIds.has(rule.targetId)
-                    ) {
-                        return true;
-                    }
-
-                    if (
-                        rule.targetType === AccessTargetType.Door &&
-                        doorIds.has(rule.targetId)
-                    ) {
-                        return true;
-                    }
-
-                    return false;
-                });
-
-                acc[zone.id] = {
-                    rooms: zoneRooms.length,
-                    doors: zoneDoors.length,
-                    rules: zoneRules.length,
-                };
-
-                return acc;
-            },
-            {}
-        );
+            return acc;
+        }, {});
     }, [zones, rooms, doors, rules]);
+
+    const isTreeLoading =
+        isLoading || roomsQuery.isLoading || doorsQuery.isLoading || rulesQuery.isLoading;
 
     return (
         <SectionCard
@@ -114,7 +127,7 @@ export function ZoneAccessTreePanel({
                         <Stack spacing={0.5}>
                             <Typography variant="subtitle1">Campus access tree</Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Zone → Rooms → Doors → Rules.
+                                Browse zones, rooms, doors and rule targets.
                             </Typography>
                         </Stack>
 
@@ -148,10 +161,10 @@ export function ZoneAccessTreePanel({
             <Divider />
 
             <Box sx={{ p: 1.5 }}>
-                {isLoading ? (
+                {isTreeLoading ? (
                     <Stack spacing={1}>
                         {[1, 2, 3].map((item) => (
-                            <Skeleton key={item} height={124} sx={{ borderRadius: 3 }} />
+                            <Skeleton key={item} height={170} sx={{ borderRadius: 3 }} />
                         ))}
                     </Stack>
                 ) : zones.length === 0 ? (
@@ -162,13 +175,14 @@ export function ZoneAccessTreePanel({
                         </Typography>
                     </Box>
                 ) : (
-                    <Stack spacing={1}>
+                    <Stack spacing={1.25}>
                         {zones.map((zone) => {
                             const selected = zone.id === selectedZoneId;
-                            const stats = statsByZone[zone.id] ?? {
-                                rooms: 0,
-                                doors: 0,
-                                rules: 0,
+                            const tree = treeByZone[zone.id] ?? {
+                                rooms: [],
+                                doors: [],
+                                zoneDoors: [],
+                                rules: { zone: 0, room: 0, door: 0 },
                             };
 
                             return (
@@ -201,21 +215,11 @@ export function ZoneAccessTreePanel({
                                         },
                                     }}
                                 >
-                                    <Stack spacing={1.35}>
+                                    <Stack spacing={1.4}>
                                         <Stack direction="row" spacing={1.25} alignItems="center">
-                                            <Box
-                                                sx={{
-                                                    width: 40,
-                                                    height: 40,
-                                                    borderRadius: 2.5,
-                                                    display: 'grid',
-                                                    placeItems: 'center',
-                                                    bgcolor: alpha(theme.palette.primary.main, 0.12),
-                                                    color: 'primary.main',
-                                                }}
-                                            >
+                                            <TreeIcon tone="primary">
                                                 <AccountTreeOutlinedIcon fontSize="small" />
-                                            </Box>
+                                            </TreeIcon>
 
                                             <Stack minWidth={0} flex={1}>
                                                 <Typography variant="subtitle2" noWrap>
@@ -240,22 +244,58 @@ export function ZoneAccessTreePanel({
                                                 borderColor: alpha(theme.palette.text.secondary, 0.24),
                                             }}
                                         >
-                                            <Stack spacing={0.85}>
-                                                <TreeChild
+                                            <Stack spacing={1}>
+                                                <TreeGroup
                                                     icon={<MeetingRoomOutlinedIcon fontSize="small" />}
                                                     label="Rooms"
-                                                    count={stats.rooms}
-                                                />
-                                                <TreeChild
+                                                    count={tree.rooms.length}
+                                                >
+                                                    {tree.rooms.slice(0, 4).map((room) => (
+                                                        <TreeLeaf
+                                                            key={room.id}
+                                                            label={room.name}
+                                                            meta={room.code}
+                                                            inactive={!room.isActive}
+                                                        />
+                                                    ))}
+
+                                                    {tree.rooms.length > 4 ? (
+                                                        <TreeMore count={tree.rooms.length - 4} />
+                                                    ) : null}
+                                                </TreeGroup>
+
+                                                <TreeGroup
                                                     icon={<DoorSlidingOutlinedIcon fontSize="small" />}
-                                                    label="Doors"
-                                                    count={stats.doors}
-                                                />
-                                                <TreeChild
+                                                    label="Zone-level doors"
+                                                    count={tree.zoneDoors.length}
+                                                >
+                                                    {tree.zoneDoors.slice(0, 3).map((door) => (
+                                                        <TreeLeaf
+                                                            key={door.id}
+                                                            label={door.name}
+                                                            meta={door.code}
+                                                            inactive={!door.isActive}
+                                                        />
+                                                    ))}
+
+                                                    {tree.zoneDoors.length > 3 ? (
+                                                        <TreeMore count={tree.zoneDoors.length - 3} />
+                                                    ) : null}
+                                                </TreeGroup>
+
+                                                <TreeGroup
                                                     icon={<RuleOutlinedIcon fontSize="small" />}
                                                     label="Rules"
-                                                    count={stats.rules}
-                                                />
+                                                    count={
+                                                        tree.rules.zone +
+                                                        tree.rules.room +
+                                                        tree.rules.door
+                                                    }
+                                                >
+                                                    <TreeLeaf label="Zone rules" meta={String(tree.rules.zone)} />
+                                                    <TreeLeaf label="Room rules" meta={String(tree.rules.room)} />
+                                                    <TreeLeaf label="Door rules" meta={String(tree.rules.door)} />
+                                                </TreeGroup>
                                             </Stack>
                                         </Box>
                                     </Stack>
@@ -269,24 +309,115 @@ export function ZoneAccessTreePanel({
     );
 }
 
-function TreeChild({
+function TreeIcon({
+                      children,
+                      tone,
+                  }: {
+    children: React.ReactNode;
+    tone: 'primary' | 'muted';
+}) {
+    const theme = useTheme();
+
+    return (
+        <Box
+            sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2.5,
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor:
+                    tone === 'primary'
+                        ? alpha(theme.palette.primary.main, 0.12)
+                        : alpha(theme.palette.text.secondary, 0.08),
+                color: tone === 'primary' ? 'primary.main' : 'text.secondary',
+            }}
+        >
+            {children}
+        </Box>
+    );
+}
+
+function TreeGroup({
                        icon,
                        label,
                        count,
+                       children,
                    }: {
     icon: React.ReactNode;
     label: string;
     count: number;
+    children: React.ReactNode;
 }) {
     return (
-        <Stack direction="row" spacing={1} alignItems="center">
-            <Box sx={{ color: 'text.secondary', display: 'flex' }}>{icon}</Box>
-            <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+        <Stack spacing={0.55}>
+            <Stack direction="row" spacing={1} alignItems="center">
+                <Box sx={{ color: 'text.secondary', display: 'flex' }}>{icon}</Box>
+                <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                    {label}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={800}>
+                    {count}
+                </Typography>
+            </Stack>
+
+            {count > 0 ? (
+                <Box
+                    sx={{
+                        ml: 1.25,
+                        pl: 1.75,
+                        borderLeft: '1px dashed',
+                        borderColor: 'divider',
+                    }}
+                >
+                    <Stack spacing={0.4}>{children}</Stack>
+                </Box>
+            ) : null}
+        </Stack>
+    );
+}
+
+function TreeLeaf({
+                      label,
+                      meta,
+                      inactive,
+                  }: {
+    label: string;
+    meta: string;
+    inactive?: boolean;
+}) {
+    return (
+        <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+            <Box
+                sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    bgcolor: inactive ? 'warning.main' : 'success.main',
+                    flexShrink: 0,
+                }}
+            />
+
+            <Typography
+                variant="caption"
+                color={inactive ? 'text.disabled' : 'text.secondary'}
+                noWrap
+                sx={{ flex: 1 }}
+            >
                 {label}
             </Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                {count}
+
+            <Typography variant="caption" color="text.disabled" noWrap>
+                {meta}
             </Typography>
         </Stack>
+    );
+}
+
+function TreeMore({ count }: { count: number }) {
+    return (
+        <Typography variant="caption" color="text.disabled">
+            +{count} more
+        </Typography>
     );
 }
