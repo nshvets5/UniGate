@@ -1,19 +1,23 @@
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DoorSlidingOutlinedIcon from '@mui/icons-material/DoorSlidingOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import {
     Box,
     Button,
+    Chip,
     CircularProgress,
     Divider,
     IconButton,
+    InputAdornment,
     Stack,
+    TextField,
     Tooltip,
     Typography,
 } from '@mui/material';
@@ -30,19 +34,22 @@ import type { ZoneDto } from '../../entities/zone/types';
 import { CreateAccessRuleDialog } from '../../features/access-rules/create-access-rule/create-access-rule-dialog';
 import { useAccessRulesQuery } from '../../features/access-rules/list-access-rules/use-access-rules-query';
 import { useToggleAccessRuleActiveMutation } from '../../features/access-rules/toggle-access-rule-active/use-toggle-access-rule-active-mutation';
+import { UpdateAccessRuleDialog } from '../../features/access-rules/update-access-rule/update-access-rule-dialog';
 import { useGroupsQuery } from '../../features/groups/list-groups/use-groups-query';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ErrorState } from '../../shared/ui/error-state';
 import { LoadingState } from '../../shared/ui/loading-state';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
-import { UpdateAccessRuleDialog } from '../../features/access-rules/update-access-rule/update-access-rule-dialog';
 
 type Props = {
     zone: ZoneDto;
     rooms: RoomDto[];
     doors: DoorDto[];
 };
+
+type TargetFilter = 'all' | 'zone' | 'room' | 'door';
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 const dayNames: Record<number, string> = {
     1: 'Mon',
@@ -59,6 +66,9 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
 
     const [createOpen, setCreateOpen] = useState(false);
     const [editingRule, setEditingRule] = useState<AccessRuleDto | null>(null);
+    const [search, setSearch] = useState('');
+    const [targetFilter, setTargetFilter] = useState<TargetFilter>('all');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
     const roomIds = useMemo(() => rooms.map((room) => room.id), [rooms]);
     const doorIds = useMemo(() => doors.map((door) => door.id), [doors]);
@@ -74,6 +84,8 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
     });
 
     const toggleMutation = useToggleAccessRuleActiveMutation();
+
+    const groups = groupsQuery.data?.items ?? [];
 
     const rules = useMemo(() => {
         const items = rulesQuery.data?.items ?? [];
@@ -100,6 +112,57 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
         });
     }, [rulesQuery.data, zone.id, roomIds, doorIds]);
 
+    const filteredRules = useMemo(() => {
+        const normalizedSearch = search.trim().toLowerCase();
+
+        return rules.filter((rule) => {
+            const group = groups.find((item) => item.id === rule.groupId);
+            const target = resolveTarget(rule, zone, rooms, doors);
+
+            const matchesSearch =
+                !normalizedSearch ||
+                [
+                    group?.name,
+                    group?.code,
+                    rule.groupId,
+                    target,
+                    getTargetTypeText(rule.targetType),
+                ]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase()
+                    .includes(normalizedSearch);
+
+            const matchesTarget =
+                targetFilter === 'all' ||
+                (targetFilter === 'zone' &&
+                    rule.targetType === AccessTargetType.Zone) ||
+                (targetFilter === 'room' &&
+                    rule.targetType === AccessTargetType.Room) ||
+                (targetFilter === 'door' &&
+                    rule.targetType === AccessTargetType.Door);
+
+            const matchesStatus =
+                statusFilter === 'all' ||
+                (statusFilter === 'active' && rule.isActive) ||
+                (statusFilter === 'inactive' && !rule.isActive);
+
+            return matchesSearch && matchesTarget && matchesStatus;
+        });
+    }, [rules, groups, search, targetFilter, statusFilter, zone, rooms, doors]);
+
+    const counts = useMemo(
+        () => ({
+            total: rules.length,
+            zone: rules.filter((rule) => rule.targetType === AccessTargetType.Zone).length,
+            room: rules.filter((rule) => rule.targetType === AccessTargetType.Room).length,
+            door: rules.filter((rule) => rule.targetType === AccessTargetType.Door).length,
+            active: rules.filter((rule) => rule.isActive).length,
+            inactive: rules.filter((rule) => !rule.isActive).length,
+        }),
+        [rules]
+    );
+
     const handleToggleActive = async (rule: AccessRuleDto) => {
         await toggleMutation.mutateAsync({
             id: rule.id,
@@ -121,16 +184,10 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                     }}
                 >
                     <Stack spacing={0.5}>
-                        <Typography variant="subtitle1">
-                            Access rules
-                        </Typography>
+                        <Typography variant="subtitle1">Access rules</Typography>
 
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                        >
-                            Room-level, door-level and zone-level access
-                            policies.
+                        <Typography variant="body2" color="text.secondary">
+                            Room-level, door-level and zone-level access policies.
                         </Typography>
                     </Stack>
 
@@ -141,6 +198,69 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                     >
                         Add rule
                     </Button>
+                </Box>
+
+                <Divider />
+
+                <Box sx={{ p: 2.25 }}>
+                    <Stack spacing={1.5}>
+                        <Stack
+                            direction={{ xs: 'column', md: 'row' }}
+                            spacing={1.5}
+                            justifyContent="space-between"
+                            alignItems={{ xs: 'stretch', md: 'center' }}
+                        >
+                            <TextField
+                                size="small"
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Search by group or target..."
+                                sx={{ minWidth: { md: 320 } }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchOutlinedIcon />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                {[
+                                    ['all', `All ${counts.total}`],
+                                    ['zone', `Zone ${counts.zone}`],
+                                    ['room', `Room ${counts.room}`],
+                                    ['door', `Door ${counts.door}`],
+                                ].map(([value, label]) => (
+                                    <Chip
+                                        key={value}
+                                        label={label}
+                                        clickable
+                                        color={targetFilter === value ? 'primary' : 'default'}
+                                        variant={targetFilter === value ? 'filled' : 'outlined'}
+                                        onClick={() => setTargetFilter(value as TargetFilter)}
+                                    />
+                                ))}
+                            </Stack>
+                        </Stack>
+
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            {[
+                                ['all', 'All statuses'],
+                                ['active', `Active ${counts.active}`],
+                                ['inactive', `Inactive ${counts.inactive}`],
+                            ].map(([value, label]) => (
+                                <Chip
+                                    key={value}
+                                    label={label}
+                                    clickable
+                                    color={statusFilter === value ? 'primary' : 'default'}
+                                    variant={statusFilter === value ? 'filled' : 'outlined'}
+                                    onClick={() => setStatusFilter(value as StatusFilter)}
+                                />
+                            ))}
+                        </Stack>
+                    </Stack>
                 </Box>
 
                 <Divider />
@@ -170,6 +290,11 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                             </Button>
                         }
                     />
+                ) : filteredRules.length === 0 ? (
+                    <EmptyState
+                        title="No rules match filters"
+                        description="Try changing search, target type or status filters."
+                    />
                 ) : (
                     <Box
                         sx={{
@@ -182,17 +307,9 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                             gap: 1.5,
                         }}
                     >
-                        {rules.map((rule) => {
-                            const group = groupsQuery.data?.items.find(
-                                (g) => g.id === rule.groupId
-                            );
-
-                            const target = resolveTarget(
-                                rule,
-                                zone,
-                                rooms,
-                                doors
-                            );
+                        {filteredRules.map((rule) => {
+                            const group = groups.find((g) => g.id === rule.groupId);
+                            const target = resolveTarget(rule, zone, rooms, doors);
 
                             const isTogglingCurrent =
                                 toggleMutation.isPending &&
@@ -206,26 +323,13 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                                         borderRadius: 4,
                                         border: '1px solid',
                                         borderColor: rule.isActive
-                                            ? alpha(
-                                                theme.palette.success.main,
-                                                0.25
-                                            )
-                                            : alpha(
-                                                theme.palette.warning.main,
-                                                0.25
-                                            ),
-                                        bgcolor: alpha(
-                                            theme.palette.background.paper,
-                                            0.7
-                                        ),
+                                            ? alpha(theme.palette.success.main, 0.25)
+                                            : alpha(theme.palette.warning.main, 0.25),
+                                        bgcolor: alpha(theme.palette.background.paper, 0.7),
                                     }}
                                 >
                                     <Stack spacing={1.75}>
-                                        <Stack
-                                            direction="row"
-                                            spacing={1.25}
-                                            alignItems="flex-start"
-                                        >
+                                        <Stack direction="row" spacing={1.25} alignItems="flex-start">
                                             <Box
                                                 sx={{
                                                     width: 42,
@@ -233,86 +337,43 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                                                     borderRadius: 3,
                                                     display: 'grid',
                                                     placeItems: 'center',
-                                                    bgcolor: alpha(
-                                                        theme.palette.primary
-                                                            .main,
-                                                        0.12
-                                                    ),
+                                                    bgcolor: alpha(theme.palette.primary.main, 0.12),
                                                     color: 'primary.main',
                                                 }}
                                             >
                                                 <RuleOutlinedIcon fontSize="small" />
                                             </Box>
 
-                                            <Stack
-                                                minWidth={0}
-                                                flex={1}
-                                                spacing={0.4}
-                                            >
-                                                <Typography
-                                                    variant="subtitle2"
-                                                    noWrap
-                                                >
-                                                    {group?.name ??
-                                                        'Unknown group'}
+                                            <Stack minWidth={0} flex={1} spacing={0.4}>
+                                                <Typography variant="subtitle2" noWrap>
+                                                    {group?.name ?? 'Unknown group'}
                                                 </Typography>
 
-                                                <Typography
-                                                    variant="body2"
-                                                    color="text.secondary"
-                                                    noWrap
-                                                >
-                                                    {group?.code ??
-                                                        rule.groupId}
+                                                <Typography variant="body2" color="text.secondary" noWrap>
+                                                    {group?.code ?? rule.groupId}
                                                 </Typography>
                                             </Stack>
 
                                             <StatusChip
-                                                label={
-                                                    rule.isActive
-                                                        ? 'Active'
-                                                        : 'Inactive'
-                                                }
-                                                variant={
-                                                    rule.isActive
-                                                        ? 'success'
-                                                        : 'warning'
-                                                }
+                                                label={rule.isActive ? 'Active' : 'Inactive'}
+                                                variant={rule.isActive ? 'success' : 'warning'}
                                             />
                                         </Stack>
 
-                                        <Stack
-                                            direction="row"
-                                            spacing={1}
-                                            flexWrap="wrap"
-                                            useFlexGap
-                                        >
-                                            <TargetBadge
-                                                type={rule.targetType}
-                                            />
-
-                                            <StatusChip
-                                                label={target}
-                                                variant="info"
-                                            />
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                            <TargetBadge type={rule.targetType} />
+                                            <StatusChip label={target} variant="info" />
                                         </Stack>
 
                                         <Box
                                             sx={{
                                                 p: 1.5,
                                                 borderRadius: 3,
-                                                bgcolor: alpha(
-                                                    theme.palette.primary.main,
-                                                    0.05
-                                                ),
+                                                bgcolor: alpha(theme.palette.primary.main, 0.05),
                                             }}
                                         >
                                             <Stack spacing={1}>
-                                                <Stack
-                                                    direction="row"
-                                                    spacing={1}
-                                                    alignItems="center"
-                                                >
+                                                <Stack direction="row" spacing={1} alignItems="center">
                                                     <AccessTimeOutlinedIcon
                                                         sx={{
                                                             fontSize: 18,
@@ -320,44 +381,28 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                                                         }}
                                                     />
 
-                                                    <Typography
-                                                        variant="body2"
-                                                        fontWeight={700}
-                                                    >
+                                                    <Typography variant="body2" fontWeight={700}>
                                                         Access windows
                                                     </Typography>
                                                 </Stack>
 
-                                                <Stack
-                                                    direction="row"
-                                                    spacing={1}
-                                                    flexWrap="wrap"
-                                                    useFlexGap
-                                                >
-                                                    {rule.windows.map(
-                                                        (window, index) => (
-                                                            <StatusChip
-                                                                key={index}
-                                                                label={`${dayNames[window.dayOfWeekIso]} ${window.startTime.slice(
-                                                                    0,
-                                                                    5
-                                                                )}–${window.endTime.slice(
-                                                                    0,
-                                                                    5
-                                                                )}`}
-                                                                variant="default"
-                                                            />
-                                                        )
-                                                    )}
+                                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                                    {rule.windows.map((window, index) => (
+                                                        <StatusChip
+                                                            key={index}
+                                                            label={`${dayNames[window.dayOfWeekIso]} ${window.startTime.slice(
+                                                                0,
+                                                                5
+                                                            )}–${window.endTime.slice(0, 5)}`}
+                                                            variant="default"
+                                                        />
+                                                    ))}
                                                 </Stack>
                                             </Stack>
                                         </Box>
 
                                         <Stack spacing={0.5}>
-                                            <Typography
-                                                variant="caption"
-                                                color="text.secondary"
-                                            >
+                                            <Typography variant="caption" color="text.secondary">
                                                 Validity
                                             </Typography>
 
@@ -366,10 +411,7 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                                             </Typography>
                                         </Stack>
 
-                                        <Stack
-                                            direction="row"
-                                            justifyContent="flex-end"
-                                        >
+                                        <Stack direction="row" justifyContent="flex-end" spacing={1}>
                                             <Tooltip title="Edit rule">
                                                 <IconButton onClick={() => setEditingRule(rule)}>
                                                     <EditOutlinedIcon />
@@ -385,19 +427,11 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                                             >
                                                 <span>
                                                     <IconButton
-                                                        onClick={() =>
-                                                            void handleToggleActive(
-                                                                rule
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            isTogglingCurrent
-                                                        }
+                                                        onClick={() => void handleToggleActive(rule)}
+                                                        disabled={isTogglingCurrent}
                                                     >
                                                         {isTogglingCurrent ? (
-                                                            <CircularProgress
-                                                                size={18}
-                                                            />
+                                                            <CircularProgress size={18} />
                                                         ) : rule.isActive ? (
                                                             <PauseCircleOutlineOutlinedIcon />
                                                         ) : (
@@ -417,10 +451,12 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
 
             <CreateAccessRuleDialog
                 open={createOpen}
-                zoneId={zone.id}
+                defaultTargetType={AccessTargetType.Zone}
+                defaultTargetId={zone.id}
+                zones={[zone]}
                 rooms={rooms}
                 doors={doors}
-                groups={groupsQuery.data?.items ?? []}
+                groups={groups}
                 onClose={() => setCreateOpen(false)}
             />
 
@@ -444,19 +480,17 @@ function resolveTarget(
 ) {
     switch (rule.targetType) {
         case AccessTargetType.Zone:
-            return zone.name;
+            return `${zone.name} (${zone.code})`;
 
-        case AccessTargetType.Room:
-            return (
-                rooms.find((room) => room.id === rule.targetId)?.name ??
-                'Unknown room'
-            );
+        case AccessTargetType.Room: {
+            const room = rooms.find((item) => item.id === rule.targetId);
+            return room ? `${room.name} (${room.code})` : 'Unknown room';
+        }
 
-        case AccessTargetType.Door:
-            return (
-                doors.find((door) => door.id === rule.targetId)?.name ??
-                'Unknown door'
-            );
+        case AccessTargetType.Door: {
+            const door = doors.find((item) => item.id === rule.targetId);
+            return door ? `${door.name} (${door.code})` : 'Unknown door';
+        }
 
         default:
             return 'Unknown target';
@@ -479,11 +513,20 @@ function formatValidity(rule: AccessRuleDto) {
     return `${from} → ${to}`;
 }
 
-function TargetBadge({
-                         type,
-                     }: {
-    type: AccessTargetType;
-}) {
+function getTargetTypeText(type: AccessTargetType) {
+    switch (type) {
+        case AccessTargetType.Zone:
+            return 'Zone';
+        case AccessTargetType.Room:
+            return 'Room';
+        case AccessTargetType.Door:
+            return 'Door';
+        default:
+            return 'Unknown';
+    }
+}
+
+function TargetBadge({ type }: { type: AccessTargetType }) {
     switch (type) {
         case AccessTargetType.Zone:
             return (
@@ -513,11 +556,6 @@ function TargetBadge({
             );
 
         default:
-            return (
-                <StatusChip
-                    label="Unknown"
-                    variant="default"
-                />
-            );
+            return <StatusChip label="Unknown" variant="default" />;
     }
 }
