@@ -1,4 +1,5 @@
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import GppGoodOutlinedIcon from '@mui/icons-material/GppGoodOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import {
@@ -11,8 +12,14 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
-import type { AccessRuleDto } from '../../entities/access-rule/types';
+import {
+    AccessTargetType,
+    type AccessRuleDto,
+} from '../../entities/access-rule/types';
+import type { DoorDto } from '../../entities/door/types';
+import type { RoomDto } from '../../entities/room/api';
 import type { ZoneDto } from '../../entities/zone/types';
 import { CreateAccessRuleDialog } from '../../features/access-rules/create-access-rule/create-access-rule-dialog';
 import { useAccessRulesQuery } from '../../features/access-rules/list-access-rules/use-access-rules-query';
@@ -20,16 +27,16 @@ import { useToggleAccessRuleActiveMutation } from '../../features/access-rules/t
 import { useGroupsQuery } from '../../features/groups/list-groups/use-groups-query';
 import { CodeBadge } from '../../shared/ui/code-badge';
 import { EmptyState } from '../../shared/ui/empty-state';
-import { EntityRow } from '../../shared/ui/entity-row';
-import { EntityTable, EntityTableHeaderCell } from '../../shared/ui/entity-table';
 import { ErrorState } from '../../shared/ui/error-state';
 import { LoadingState } from '../../shared/ui/loading-state';
-import { RowActions } from '../../shared/ui/row-actions';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
 
-type ZoneRulesSectionProps = {
+type Props = {
     zone: ZoneDto;
+    zones: ZoneDto[];
+    rooms: RoomDto[];
+    doors: DoorDto[];
 };
 
 function formatRulePeriod(rule: AccessRuleDto) {
@@ -46,23 +53,65 @@ function formatRulePeriod(rule: AccessRuleDto) {
     return `${from} → ${to}`;
 }
 
-export function ZoneRulesSection({ zone }: ZoneRulesSectionProps) {
+function getTargetTypeLabel(type: AccessTargetType) {
+    if (type === AccessTargetType.Zone) return 'Zone';
+    if (type === AccessTargetType.Room) return 'Room';
+    if (type === AccessTargetType.Door) return 'Door';
+    return 'Unknown';
+}
+
+export function ZoneRulesSection({ zone, zones, rooms, doors }: Props) {
+    const theme = useTheme();
     const [createOpen, setCreateOpen] = useState(false);
 
-    const desktopColumns = 'minmax(240px, 1.7fr) 160px 140px 140px';
+    const rulesQuery = useAccessRulesQuery({
+        page: 1,
+        pageSize: 200,
+    });
 
-    const queryParams = useMemo(
-        () => ({
-            zoneId: zone.id,
-            page: 1,
-            pageSize: 20,
-        }),
-        [zone.id]
-    );
-
-    const rulesQuery = useAccessRulesQuery(queryParams);
     const groupsQuery = useGroupsQuery({ page: 1, pageSize: 100 });
     const toggleMutation = useToggleAccessRuleActiveMutation();
+
+    const roomIds = useMemo(() => new Set(rooms.map((room) => room.id)), [rooms]);
+    const doorIds = useMemo(() => new Set(doors.map((door) => door.id)), [doors]);
+
+    const targetNameMap = useMemo(() => {
+        const map = new Map<string, string>();
+
+        for (const item of zones) {
+            map.set(`${AccessTargetType.Zone}:${item.id}`, `${item.name} (${item.code})`);
+        }
+
+        for (const item of rooms) {
+            map.set(`${AccessTargetType.Room}:${item.id}`, `${item.name} (${item.code})`);
+        }
+
+        for (const item of doors) {
+            map.set(`${AccessTargetType.Door}:${item.id}`, `${item.name} (${item.code})`);
+        }
+
+        return map;
+    }, [zones, rooms, doors]);
+
+    const zoneRules = useMemo(() => {
+        const rules = rulesQuery.data?.items ?? [];
+
+        return rules.filter((rule) => {
+            if (rule.targetType === AccessTargetType.Zone && rule.targetId === zone.id) {
+                return true;
+            }
+
+            if (rule.targetType === AccessTargetType.Room && roomIds.has(rule.targetId)) {
+                return true;
+            }
+
+            if (rule.targetType === AccessTargetType.Door && doorIds.has(rule.targetId)) {
+                return true;
+            }
+
+            return false;
+        });
+    }, [rulesQuery.data, zone.id, roomIds, doorIds]);
 
     const handleToggleActive = async (rule: AccessRuleDto) => {
         await toggleMutation.mutateAsync({
@@ -74,192 +123,186 @@ export function ZoneRulesSection({ zone }: ZoneRulesSectionProps) {
     return (
         <>
             <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-                <Stack spacing={0}>
-                    <Box
-                        sx={{
-                            p: 3,
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: 2,
-                            flexWrap: 'wrap',
-                        }}
+                <Box
+                    sx={{
+                        p: 3,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 2,
+                        flexWrap: 'wrap',
+                    }}
+                >
+                    <Stack spacing={0.5}>
+                        <Typography variant="subtitle1">Access rules</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Rules may target the selected zone, its rooms or its doors.
+                        </Typography>
+                    </Stack>
+
+                    <Button
+                        variant="contained"
+                        startIcon={<AddOutlinedIcon />}
+                        onClick={() => setCreateOpen(true)}
+                        disabled={groupsQuery.isLoading || groupsQuery.isError}
                     >
-                        <Stack spacing={0.5}>
-                            <Typography variant="subtitle1">Access rules</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Access policies linked to the selected zone.
-                            </Typography>
-                        </Stack>
+                        Add rule
+                    </Button>
+                </Box>
 
-                        <Button
-                            variant="contained"
-                            startIcon={<AddOutlinedIcon />}
-                            onClick={() => setCreateOpen(true)}
-                            disabled={groupsQuery.isLoading || groupsQuery.isError}
-                        >
-                            Add rule
-                        </Button>
-                    </Box>
+                <Divider />
 
-                    <Divider />
-
-                    {rulesQuery.isLoading ? (
-                        <LoadingState
-                            title="Loading access rules"
-                            description="Please wait while zone rules are being loaded."
-                        />
-                    ) : rulesQuery.isError ? (
-                        <ErrorState
-                            title="Failed to load access rules"
-                            description="The rules list could not be loaded from the server."
-                            onRetry={() => void rulesQuery.refetch()}
-                        />
-                    ) : !rulesQuery.data || rulesQuery.data.items.length === 0 ? (
-                        <EmptyState
-                            title="No access rules found"
-                            description="No access policies are currently linked to this zone."
-                            action={
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddOutlinedIcon />}
-                                    onClick={() => setCreateOpen(true)}
-                                    disabled={groupsQuery.isLoading || groupsQuery.isError}
-                                >
-                                    Add first rule
-                                </Button>
-                            }
-                        />
-                    ) : (
-                        <Stack spacing={0} sx={{ p: 2.25 }}>
-                            <EntityTable
-                                gridTemplateColumns={desktopColumns}
-                                columns={
-                                    <>
-                                        <EntityTableHeaderCell>Rule</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="center">
-                                            Windows
-                                        </EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="center">
-                                            Status
-                                        </EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="right">
-                                            Actions
-                                        </EntityTableHeaderCell>
-                                    </>
-                                }
+                {rulesQuery.isLoading ? (
+                    <LoadingState
+                        title="Loading access rules"
+                        description="Please wait while access rules are being loaded."
+                    />
+                ) : rulesQuery.isError ? (
+                    <ErrorState
+                        title="Failed to load access rules"
+                        description="The rules list could not be loaded from the server."
+                        onRetry={() => void rulesQuery.refetch()}
+                    />
+                ) : zoneRules.length === 0 ? (
+                    <EmptyState
+                        title="No access rules found"
+                        description="Create a zone, room or door level access rule for this workspace."
+                        action={
+                            <Button
+                                variant="contained"
+                                startIcon={<AddOutlinedIcon />}
+                                onClick={() => setCreateOpen(true)}
+                                disabled={groupsQuery.isLoading || groupsQuery.isError}
                             >
-                                {rulesQuery.data.items.map((rule) => {
-                                    const isTogglingCurrent =
-                                        toggleMutation.isPending &&
-                                        toggleMutation.variables?.id === rule.id;
+                                Add first rule
+                            </Button>
+                        }
+                    />
+                ) : (
+                    <Stack spacing={0} divider={<Divider />}>
+                        {zoneRules.map((rule) => {
+                            const isTogglingCurrent =
+                                toggleMutation.isPending &&
+                                toggleMutation.variables?.id === rule.id;
 
-                                    return (
-                                        <EntityRow key={rule.id}>
-                                            <Box
-                                                sx={{
-                                                    display: 'grid',
-                                                    gridTemplateColumns: {
-                                                        xs: '1fr',
-                                                        md: desktopColumns,
-                                                    },
-                                                    alignItems: 'center',
-                                                    columnGap: 2,
-                                                    rowGap: 1.5,
-                                                    pl: { xs: 0, md: 1.25 },
-                                                }}
-                                            >
-                                                <Stack spacing={0.45} minWidth={0}>
-                                                    <Typography variant="subtitle1" noWrap>
-                                                        Group rule
-                                                    </Typography>
+                            const targetLabel =
+                                targetNameMap.get(`${rule.targetType}:${rule.targetId}`) ??
+                                rule.targetId;
 
-                                                    <Typography
-                                                        variant="body2"
-                                                        color="text.secondary"
-                                                        noWrap
-                                                    >
-                                                        {formatRulePeriod(rule)}
-                                                    </Typography>
-                                                </Stack>
-
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: {
-                                                            xs: 'flex-start',
-                                                            md: 'center',
-                                                        },
-                                                        minHeight: 40,
-                                                    }}
-                                                >
-                                                    <CodeBadge
-                                                        value={`${rule.windows?.length ?? 0} window(s)`}
-                                                    />
-                                                </Box>
-
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: {
-                                                            xs: 'flex-start',
-                                                            md: 'center',
-                                                        },
-                                                        minHeight: 40,
-                                                    }}
-                                                >
-                                                    <StatusChip
-                                                        label={rule.isActive ? 'Active' : 'Inactive'}
-                                                        variant={rule.isActive ? 'success' : 'warning'}
-                                                    />
-                                                </Box>
-
-                                                <Stack
-                                                    direction="row"
-                                                    spacing={0.5}
-                                                    justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
-                                                    alignItems="center"
-                                                >
-                                                    <RowActions>
-                                                        <Tooltip
-                                                            title={
-                                                                rule.isActive
-                                                                    ? 'Deactivate rule'
-                                                                    : 'Activate rule'
-                                                            }
-                                                        >
-                              <span>
-                                <IconButton
-                                    onClick={() => void handleToggleActive(rule)}
-                                    disabled={isTogglingCurrent}
+                            return (
+                                <Box
+                                    key={rule.id}
+                                    sx={{
+                                        p: 2.5,
+                                        display: 'grid',
+                                        gridTemplateColumns: {
+                                            xs: '1fr',
+                                            lg: '44px minmax(0, 1fr) 160px 120px auto',
+                                        },
+                                        gap: 2,
+                                        alignItems: 'center',
+                                        transition: 'background-color 0.18s ease',
+                                        '&:hover': {
+                                            bgcolor: alpha(theme.palette.primary.main, 0.03),
+                                        },
+                                    }}
                                 >
-                                  {isTogglingCurrent ? (
-                                      <CircularProgress size={18} />
-                                  ) : rule.isActive ? (
-                                      <PauseCircleOutlineOutlinedIcon />
-                                  ) : (
-                                      <PlayCircleOutlineOutlinedIcon />
-                                  )}
-                                </IconButton>
-                              </span>
-                                                        </Tooltip>
-                                                    </RowActions>
-                                                </Stack>
-                                            </Box>
-                                        </EntityRow>
-                                    );
-                                })}
-                            </EntityTable>
-                        </Stack>
-                    )}
-                </Stack>
+                                    <Box
+                                        sx={{
+                                            width: 42,
+                                            height: 42,
+                                            borderRadius: 2.5,
+                                            display: 'grid',
+                                            placeItems: 'center',
+                                            bgcolor:
+                                                rule.targetType === AccessTargetType.Door
+                                                    ? alpha(theme.palette.error.main, 0.1)
+                                                    : rule.targetType === AccessTargetType.Room
+                                                        ? alpha(theme.palette.warning.main, 0.12)
+                                                        : alpha(theme.palette.primary.main, 0.1),
+                                            color:
+                                                rule.targetType === AccessTargetType.Door
+                                                    ? 'error.main'
+                                                    : rule.targetType === AccessTargetType.Room
+                                                        ? 'warning.main'
+                                                        : 'primary.main',
+                                        }}
+                                    >
+                                        <GppGoodOutlinedIcon fontSize="small" />
+                                    </Box>
+
+                                    <Stack spacing={0.65} minWidth={0}>
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                            <StatusChip
+                                                label={getTargetTypeLabel(rule.targetType)}
+                                                variant={
+                                                    rule.targetType === AccessTargetType.Door
+                                                        ? 'error'
+                                                        : rule.targetType === AccessTargetType.Room
+                                                            ? 'warning'
+                                                            : 'info'
+                                                }
+                                            />
+                                            <CodeBadge value={`${rule.windows?.length ?? 0} window(s)`} />
+                                        </Stack>
+
+                                        <Typography variant="subtitle2" noWrap>
+                                            {targetLabel}
+                                        </Typography>
+
+                                        <Typography variant="body2" color="text.secondary" noWrap>
+                                            {formatRulePeriod(rule)}
+                                        </Typography>
+                                    </Stack>
+
+                                    <Stack spacing={0.35}>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Group
+                                        </Typography>
+                                        <Typography variant="body2" noWrap>
+                                            {rule.groupId}
+                                        </Typography>
+                                    </Stack>
+
+                                    <StatusChip
+                                        label={rule.isActive ? 'Active' : 'Inactive'}
+                                        variant={rule.isActive ? 'success' : 'warning'}
+                                    />
+
+                                    <Stack direction="row" justifyContent={{ xs: 'flex-start', lg: 'flex-end' }}>
+                                        <Tooltip
+                                            title={rule.isActive ? 'Deactivate rule' : 'Activate rule'}
+                                        >
+                                            <span>
+                                                <IconButton
+                                                    onClick={() => void handleToggleActive(rule)}
+                                                    disabled={isTogglingCurrent}
+                                                >
+                                                    {isTogglingCurrent ? (
+                                                        <CircularProgress size={18} />
+                                                    ) : rule.isActive ? (
+                                                        <PauseCircleOutlineOutlinedIcon />
+                                                    ) : (
+                                                        <PlayCircleOutlineOutlinedIcon />
+                                                    )}
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Stack>
+                                </Box>
+                            );
+                        })}
+                    </Stack>
+                )}
             </SectionCard>
 
             <CreateAccessRuleDialog
                 open={createOpen}
-                zoneId={zone.id}
+                defaultTargetType={AccessTargetType.Zone}
+                defaultTargetId={zone.id}
+                zones={zones}
+                rooms={rooms}
+                doors={doors}
                 groups={groupsQuery.data?.items ?? []}
                 onClose={() => setCreateOpen(false)}
             />

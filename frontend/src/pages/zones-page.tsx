@@ -37,9 +37,7 @@ export function ZonesPage() {
             return;
         }
 
-        const selectedStillExists = zones.some((zone) => zone.id === selectedZoneId);
-
-        if (!selectedZoneId || !selectedStillExists) {
+        if (!selectedZoneId || !zones.some((zone) => zone.id === selectedZoneId)) {
             setSelectedZoneId(zones[0].id);
         }
     }, [zones, selectedZoneId]);
@@ -58,12 +56,12 @@ export function ZonesPage() {
             <PageContainer>
                 <PageHeader
                     title="Access workspace"
-                    subtitle="Manage zones, doors and access rules from a structured workspace."
+                    subtitle="Manage zones, rooms, doors and target-based access policies."
                 />
 
                 <ErrorState
-                    title="Failed to load zones"
-                    description="The access workspace could not be loaded from the server."
+                    title="Failed to load access workspace"
+                    description="Zones could not be loaded from the server."
                     onRetry={() => void zonesQuery.refetch()}
                 />
             </PageContainer>
@@ -74,7 +72,7 @@ export function ZonesPage() {
         <PageContainer>
             <PageHeader
                 title="Access workspace"
-                subtitle="Structured view for zones, physical entry points and access policies."
+                subtitle="Hierarchical control of zones, rooms, doors and access rule targets."
             />
 
             <Box
@@ -82,7 +80,7 @@ export function ZonesPage() {
                     display: 'grid',
                     gridTemplateColumns: {
                         xs: '1fr',
-                        xl: '380px minmax(0, 1fr)',
+                        xl: '410px minmax(0, 1fr)',
                     },
                     gap: 3,
                     alignItems: 'start',
@@ -100,6 +98,7 @@ export function ZonesPage() {
 
                 <ZoneDetailsPanel
                     zone={selectedZone}
+                    zones={zones}
                     onEdit={(zone) => setEditingZone(zone)}
                     onToggleActive={(zone) => void handleToggleActive(zone)}
                     isTogglePending={
@@ -109,10 +108,7 @@ export function ZonesPage() {
                 />
             </Box>
 
-            <CreateZoneDialog
-                open={createOpen}
-                onClose={() => setCreateOpen(false)}
-            />
+            <CreateZoneDialog open={createOpen} onClose={() => setCreateOpen(false)} />
 
             <UpdateZoneDialog
                 open={Boolean(editingZone)}

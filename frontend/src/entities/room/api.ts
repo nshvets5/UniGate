@@ -5,8 +5,7 @@ export type RoomDto = {
     id: string;
     code: string;
     name: string;
-    floor: number | null;
-    building: string | null;
+    zoneId: string;
     isActive: boolean;
     createdAt: string;
 };
@@ -18,6 +17,9 @@ export type GetRoomsParams = {
 };
 
 export async function getRooms(params: GetRoomsParams) {
-    const response = await api.get<PagedResult<RoomDto>>('/rooms', { params });
+    const response = await api.get<PagedResult<RoomDto>>('/rooms', {
+        params,
+    });
+
     return response.data;
 }

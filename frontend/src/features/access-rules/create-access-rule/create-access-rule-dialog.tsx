@@ -15,13 +15,21 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { AccessTargetType } from '../../../entities/access-rule/types';
+import type { DoorDto } from '../../../entities/door/types';
 import type { GroupDto } from '../../../entities/group/types';
+import type { RoomDto } from '../../../entities/room/api';
+import type { ZoneDto } from '../../../entities/zone/types';
 import { useCreateAccessRuleMutation } from './use-create-access-rule-mutation';
 
 type Props = {
     open: boolean;
-    zoneId: string;
+    defaultTargetType: AccessTargetType;
+    defaultTargetId: string;
+    zones: ZoneDto[];
+    rooms: RoomDto[];
+    doors: DoorDto[];
     groups: GroupDto[];
     onClose: () => void;
 };
@@ -36,8 +44,25 @@ const days = [
     { value: 7, label: 'Sun' },
 ];
 
-export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props) {
+const targetTypes = [
+    { value: AccessTargetType.Zone, label: 'Zone' },
+    { value: AccessTargetType.Room, label: 'Room' },
+    { value: AccessTargetType.Door, label: 'Door' },
+];
+
+export function CreateAccessRuleDialog({
+                                           open,
+                                           defaultTargetType,
+                                           defaultTargetId,
+                                           zones,
+                                           rooms,
+                                           doors,
+                                           groups,
+                                           onClose,
+                                       }: Props) {
     const [groupId, setGroupId] = useState('');
+    const [targetType, setTargetType] = useState<AccessTargetType>(defaultTargetType);
+    const [targetId, setTargetId] = useState(defaultTargetId);
     const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
     const [startTime, setStartTime] = useState('08:00');
     const [endTime, setEndTime] = useState('18:00');
@@ -48,8 +73,10 @@ export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props)
     const createMutation = useCreateAccessRuleMutation();
 
     useEffect(() => {
-        if (!open) {
+        if (open) {
             setGroupId('');
+            setTargetType(defaultTargetType);
+            setTargetId(defaultTargetId);
             setSelectedDays([1, 2, 3, 4, 5]);
             setStartTime('08:00');
             setEndTime('18:00');
@@ -57,7 +84,44 @@ export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props)
             setValidTo('');
             setError(null);
         }
-    }, [open]);
+    }, [open, defaultTargetType, defaultTargetId]);
+
+    const targetOptions = useMemo(() => {
+        if (targetType === AccessTargetType.Zone) {
+            return zones.map((zone) => ({
+                id: zone.id,
+                label: `${zone.name} (${zone.code})`,
+            }));
+        }
+
+        if (targetType === AccessTargetType.Room) {
+            return rooms.map((room) => ({
+                id: room.id,
+                label: `${room.name} (${room.code})`,
+            }));
+        }
+
+        return doors.map((door) => ({
+            id: door.id,
+            label: `${door.name} (${door.code})`,
+        }));
+    }, [targetType, zones, rooms, doors]);
+
+    const handleTargetTypeChange = (value: AccessTargetType) => {
+        setTargetType(value);
+
+        if (value === AccessTargetType.Zone) {
+            setTargetId(zones[0]?.id ?? '');
+            return;
+        }
+
+        if (value === AccessTargetType.Room) {
+            setTargetId(rooms[0]?.id ?? '');
+            return;
+        }
+
+        setTargetId(doors[0]?.id ?? '');
+    };
 
     const toggleDay = (day: number) => {
         setSelectedDays((current) =>
@@ -71,6 +135,11 @@ export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props)
         try {
             setError(null);
 
+            if (!groupId || !targetId) {
+                setError('Please select group and target.');
+                return;
+            }
+
             if (selectedDays.length === 0) {
                 setError('Please select at least one day.');
                 return;
@@ -82,8 +151,9 @@ export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props)
             }
 
             await createMutation.mutateAsync({
-                zoneId,
                 groupId,
+                targetType,
+                targetId,
                 windows: selectedDays.map((day) => ({
                     dayOfWeekIso: day,
                     startTime: `${startTime}:00`,
@@ -126,6 +196,45 @@ export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props)
                         ))}
                     </TextField>
 
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: '180px minmax(0, 1fr)' },
+                            gap: 2,
+                        }}
+                    >
+                        <TextField
+                            select
+                            label="Target type"
+                            value={targetType}
+                            onChange={(event) =>
+                                handleTargetTypeChange(Number(event.target.value) as AccessTargetType)
+                            }
+                            fullWidth
+                        >
+                            {targetTypes.map((item) => (
+                                <MenuItem key={item.value} value={item.value}>
+                                    {item.label}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+
+                        <TextField
+                            select
+                            label="Target"
+                            value={targetId}
+                            onChange={(event) => setTargetId(event.target.value)}
+                            fullWidth
+                            helperText="Door rules have the highest priority, then room, then zone."
+                        >
+                            {targetOptions.map((item) => (
+                                <MenuItem key={item.id} value={item.id}>
+                                    {item.label}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    </Box>
+
                     <Stack spacing={1}>
                         <Typography variant="body2" color="text.secondary">
                             Days
@@ -159,13 +268,7 @@ export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props)
                         </Stack>
                     </Stack>
 
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                            gap: 2,
-                        }}
-                    >
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                         <TextField
                             label="Start time"
                             type="time"
@@ -185,13 +288,7 @@ export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props)
                         />
                     </Box>
 
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                            gap: 2,
-                        }}
-                    >
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                         <TextField
                             label="Valid from"
                             type="datetime-local"
@@ -227,6 +324,7 @@ export function CreateAccessRuleDialog({ open, zoneId, groups, onClose }: Props)
                     disabled={
                         createMutation.isPending ||
                         !groupId ||
+                        !targetId ||
                         selectedDays.length === 0 ||
                         !startTime ||
                         !endTime

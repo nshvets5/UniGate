@@ -1,9 +1,9 @@
 export type DoorDto = {
     id: string;
     zoneId: string;
+    roomId: string | null;
     code: string;
     name: string;
-    description: string | null;
     isActive: boolean;
     createdAt: string;
 };
@@ -18,17 +18,17 @@ export type GetDoorsParams = {
 
 export type CreateDoorRequest = {
     zoneId: string;
+    roomId: string | null;
     code: string;
     name: string;
-    description?: string | null;
 };
 
 export type UpdateDoorRequest = {
     id: string;
     zoneId: string;
+    roomId: string | null;
     code: string;
     name: string;
-    description?: string | null;
 };
 
 export type SetDoorActiveRequest = {
