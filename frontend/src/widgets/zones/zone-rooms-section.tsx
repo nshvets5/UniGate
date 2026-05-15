@@ -3,18 +3,22 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import {
     Box,
     Button,
+    Chip,
     CircularProgress,
     Divider,
     IconButton,
+    InputAdornment,
     Stack,
+    TextField,
     Tooltip,
     Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { RoomDto } from '../../entities/room/api';
 import type { ZoneDto } from '../../entities/zone/types';
 import { CreateRoomDialog } from '../../features/rooms/create-room/create-room-dialog';
@@ -32,12 +36,33 @@ type Props = {
     isLoading: boolean;
 };
 
+type StatusFilter = 'all' | 'active' | 'inactive';
+
 export function ZoneRoomsSection({ zone, rooms, isLoading }: Props) {
     const theme = useTheme();
     const [createOpen, setCreateOpen] = useState(false);
     const [editingRoom, setEditingRoom] = useState<RoomDto | null>(null);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
     const toggleMutation = useToggleRoomActiveMutation();
+
+    const filteredRooms = useMemo(() => {
+        const normalizedSearch = search.trim().toLowerCase();
+
+        return rooms.filter((room) => {
+            const matchesSearch =
+                !normalizedSearch ||
+                [room.name, room.code].join(' ').toLowerCase().includes(normalizedSearch);
+
+            const matchesStatus =
+                statusFilter === 'all' ||
+                (statusFilter === 'active' && room.isActive) ||
+                (statusFilter === 'inactive' && !room.isActive);
+
+            return matchesSearch && matchesStatus;
+        });
+    }, [rooms, search, statusFilter]);
 
     const handleToggleActive = async (room: RoomDto) => {
         await toggleMutation.mutateAsync({
@@ -77,6 +102,49 @@ export function ZoneRoomsSection({ zone, rooms, isLoading }: Props) {
 
                 <Divider />
 
+                <Box sx={{ p: 2.25 }}>
+                    <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={1.5}
+                        justifyContent="space-between"
+                        alignItems={{ xs: 'stretch', md: 'center' }}
+                    >
+                        <TextField
+                            size="small"
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder="Search rooms..."
+                            sx={{ minWidth: { md: 280 } }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchOutlinedIcon />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            {[
+                                ['all', 'All'],
+                                ['active', 'Active'],
+                                ['inactive', 'Inactive'],
+                            ].map(([value, label]) => (
+                                <Chip
+                                    key={value}
+                                    label={label}
+                                    clickable
+                                    color={statusFilter === value ? 'primary' : 'default'}
+                                    variant={statusFilter === value ? 'filled' : 'outlined'}
+                                    onClick={() => setStatusFilter(value as StatusFilter)}
+                                />
+                            ))}
+                        </Stack>
+                    </Stack>
+                </Box>
+
+                <Divider />
+
                 {isLoading ? (
                     <LoadingState
                         title="Loading rooms"
@@ -96,6 +164,11 @@ export function ZoneRoomsSection({ zone, rooms, isLoading }: Props) {
                             </Button>
                         }
                     />
+                ) : filteredRooms.length === 0 ? (
+                    <EmptyState
+                        title="No rooms match filters"
+                        description="Try changing search or status filters."
+                    />
                 ) : (
                     <Box
                         sx={{
@@ -108,7 +181,7 @@ export function ZoneRoomsSection({ zone, rooms, isLoading }: Props) {
                             gap: 1.5,
                         }}
                     >
-                        {rooms.map((room) => {
+                        {filteredRooms.map((room) => {
                             const isTogglingCurrent =
                                 toggleMutation.isPending &&
                                 toggleMutation.variables?.id === room.id;

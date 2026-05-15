@@ -3,13 +3,17 @@ import DoorSlidingOutlinedIcon from '@mui/icons-material/DoorSlidingOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import {
     Box,
     Button,
+    Chip,
     CircularProgress,
     Divider,
     IconButton,
+    InputAdornment,
     Stack,
+    TextField,
     Tooltip,
     Typography,
 } from '@mui/material';
@@ -34,10 +38,16 @@ type Props = {
     rooms: RoomDto[];
 };
 
+type ScopeFilter = 'all' | 'zone' | 'room';
+type StatusFilter = 'all' | 'active' | 'inactive';
+
 export function ZoneDoorsSection({ zone, rooms }: Props) {
     const theme = useTheme();
     const [createOpen, setCreateOpen] = useState(false);
     const [editingDoor, setEditingDoor] = useState<DoorDto | null>(null);
+    const [search, setSearch] = useState('');
+    const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
     const doorsQuery = useDoorsQuery({
         zoneId: zone.id,
@@ -57,14 +67,42 @@ export function ZoneDoorsSection({ zone, rooms }: Props) {
         return map;
     }, [rooms]);
 
+    const doors = doorsQuery.data?.items ?? [];
+
+    const filteredDoors = useMemo(() => {
+        const normalizedSearch = search.trim().toLowerCase();
+
+        return doors.filter((door) => {
+            const room = door.roomId ? roomMap.get(door.roomId) : null;
+
+            const matchesSearch =
+                !normalizedSearch ||
+                [door.name, door.code, room?.name, room?.code]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase()
+                    .includes(normalizedSearch);
+
+            const matchesScope =
+                scopeFilter === 'all' ||
+                (scopeFilter === 'zone' && !door.roomId) ||
+                (scopeFilter === 'room' && Boolean(door.roomId));
+
+            const matchesStatus =
+                statusFilter === 'all' ||
+                (statusFilter === 'active' && door.isActive) ||
+                (statusFilter === 'inactive' && !door.isActive);
+
+            return matchesSearch && matchesScope && matchesStatus;
+        });
+    }, [doors, roomMap, search, scopeFilter, statusFilter]);
+
     const handleToggleActive = async (door: DoorDto) => {
         await toggleMutation.mutateAsync({
             id: door.id,
             isActive: !door.isActive,
         });
     };
-
-    const doors = doorsQuery.data?.items ?? [];
 
     return (
         <>
@@ -97,6 +135,68 @@ export function ZoneDoorsSection({ zone, rooms }: Props) {
 
                 <Divider />
 
+                <Box sx={{ p: 2.25 }}>
+                    <Stack spacing={1.5}>
+                        <Stack
+                            direction={{ xs: 'column', md: 'row' }}
+                            spacing={1.5}
+                            justifyContent="space-between"
+                            alignItems={{ xs: 'stretch', md: 'center' }}
+                        >
+                            <TextField
+                                size="small"
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Search doors or rooms..."
+                                sx={{ minWidth: { md: 300 } }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchOutlinedIcon />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                {[
+                                    ['all', 'All scopes'],
+                                    ['zone', 'Zone-level'],
+                                    ['room', 'Room-level'],
+                                ].map(([value, label]) => (
+                                    <Chip
+                                        key={value}
+                                        label={label}
+                                        clickable
+                                        color={scopeFilter === value ? 'primary' : 'default'}
+                                        variant={scopeFilter === value ? 'filled' : 'outlined'}
+                                        onClick={() => setScopeFilter(value as ScopeFilter)}
+                                    />
+                                ))}
+                            </Stack>
+                        </Stack>
+
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            {[
+                                ['all', 'All'],
+                                ['active', 'Active'],
+                                ['inactive', 'Inactive'],
+                            ].map(([value, label]) => (
+                                <Chip
+                                    key={value}
+                                    label={label}
+                                    clickable
+                                    color={statusFilter === value ? 'primary' : 'default'}
+                                    variant={statusFilter === value ? 'filled' : 'outlined'}
+                                    onClick={() => setStatusFilter(value as StatusFilter)}
+                                />
+                            ))}
+                        </Stack>
+                    </Stack>
+                </Box>
+
+                <Divider />
+
                 {doorsQuery.isLoading ? (
                     <LoadingState
                         title="Loading doors"
@@ -122,6 +222,11 @@ export function ZoneDoorsSection({ zone, rooms }: Props) {
                             </Button>
                         }
                     />
+                ) : filteredDoors.length === 0 ? (
+                    <EmptyState
+                        title="No doors match filters"
+                        description="Try changing search, scope or status filters."
+                    />
                 ) : (
                     <Box
                         sx={{
@@ -134,7 +239,7 @@ export function ZoneDoorsSection({ zone, rooms }: Props) {
                             gap: 1.5,
                         }}
                     >
-                        {doors.map((door) => {
+                        {filteredDoors.map((door) => {
                             const room = door.roomId ? roomMap.get(door.roomId) : null;
                             const isTogglingCurrent =
                                 toggleMutation.isPending &&
@@ -210,9 +315,7 @@ export function ZoneDoorsSection({ zone, rooms }: Props) {
                                                 </IconButton>
                                             </Tooltip>
 
-                                            <Tooltip
-                                                title={door.isActive ? 'Deactivate door' : 'Activate door'}
-                                            >
+                                            <Tooltip title={door.isActive ? 'Deactivate door' : 'Activate door'}>
                                                 <span>
                                                     <IconButton
                                                         onClick={() => void handleToggleActive(door)}
