@@ -196,7 +196,11 @@ export function ZoneDetailsPanel({
             {tab === 'doors' ? <ZoneDoorsSection zone={zone} rooms={rooms} /> : null}
 
             {tab === 'rules' ? (
-                <ZoneRulesSection zone={zone} zones={zones} rooms={rooms} doors={doors} />
+                <ZoneRulesSection
+                    zone={zone}
+                    rooms={rooms}
+                    doors={doors}
+                />
             ) : null}
         </Stack>
     );
