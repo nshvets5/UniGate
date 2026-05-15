@@ -26,6 +26,7 @@ import { ZoneDoorsSection } from './zone-doors-section';
 import { ZoneRoomsSection } from './zone-rooms-section';
 import { ZoneRulesSection } from './zone-rules-section';
 import { ZoneTopologySection } from './zone-topology-section';
+import { ZoneInsightsSection } from './zone-insights-section';
 
 type Props = {
     zone: ZoneDto | null;
@@ -181,12 +182,20 @@ export function ZoneDetailsPanel({
             </SectionCard>
 
             {tab === 'overview' ? (
-                <ZoneTopologySection
-                    zone={zone}
-                    rooms={rooms}
-                    doors={doors}
-                    ruleCount={ruleCount}
-                />
+                <>
+                    <ZoneTopologySection
+                        zone={zone}
+                        rooms={rooms}
+                        doors={doors}
+                        ruleCount={ruleCount}
+                    />
+
+                    <ZoneInsightsSection
+                        rooms={rooms}
+                        doors={doors}
+                        rules={rules}
+                    />
+                </>
             ) : null}
 
             {tab === 'rooms' ? (
