@@ -32,12 +32,10 @@ import type { GroupDto } from '../../entities/group/types';
 import type { RoomDto } from '../../entities/room/api';
 import type { ZoneDto } from '../../entities/zone/types';
 import { CreateAccessRuleDialog } from '../../features/access-rules/create-access-rule/create-access-rule-dialog';
-import { useAccessRulesQuery } from '../../features/access-rules/list-access-rules/use-access-rules-query';
 import { useToggleAccessRuleActiveMutation } from '../../features/access-rules/toggle-access-rule-active/use-toggle-access-rule-active-mutation';
 import { UpdateAccessRuleDialog } from '../../features/access-rules/update-access-rule/update-access-rule-dialog';
 import { useGroupsQuery } from '../../features/groups/list-groups/use-groups-query';
 import { EmptyState } from '../../shared/ui/empty-state';
-import { ErrorState } from '../../shared/ui/error-state';
 import { LoadingState } from '../../shared/ui/loading-state';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
@@ -46,6 +44,8 @@ type Props = {
     zone: ZoneDto;
     rooms: RoomDto[];
     doors: DoorDto[];
+    rules: AccessRuleDto[];
+    isLoading: boolean;
 };
 
 type TargetFilter = 'all' | 'zone' | 'room' | 'door';
@@ -61,7 +61,7 @@ const dayNames: Record<number, string> = {
     7: 'Sun',
 };
 
-export function ZoneRulesSection({ zone, rooms, doors }: Props) {
+export function ZoneRulesSection({ zone, rooms, doors, rules, isLoading }: Props) {
     const theme = useTheme();
 
     const [createOpen, setCreateOpen] = useState(false);
@@ -78,39 +78,9 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
         pageSize: 100,
     });
 
-    const rulesQuery = useAccessRulesQuery({
-        page: 1,
-        pageSize: 100,
-    });
-
     const toggleMutation = useToggleAccessRuleActiveMutation();
 
     const groups = groupsQuery.data?.items ?? [];
-
-    const rules = useMemo(() => {
-        const items = rulesQuery.data?.items ?? [];
-
-        return items.filter((rule) => {
-            if (
-                rule.targetType === AccessTargetType.Zone &&
-                rule.targetId === zone.id
-            ) {
-                return true;
-            }
-
-            if (
-                rule.targetType === AccessTargetType.Room &&
-                roomIds.includes(rule.targetId)
-            ) {
-                return true;
-            }
-
-            return (
-                rule.targetType === AccessTargetType.Door &&
-                doorIds.includes(rule.targetId)
-            );
-        });
-    }, [rulesQuery.data, zone.id, roomIds, doorIds]);
 
     const filteredRules = useMemo(() => {
         const normalizedSearch = search.trim().toLowerCase();
@@ -265,16 +235,10 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
 
                 <Divider />
 
-                {rulesQuery.isLoading ? (
+                {isLoading ? (
                     <LoadingState
                         title="Loading rules"
                         description="Access rules are being loaded."
-                    />
-                ) : rulesQuery.isError ? (
-                    <ErrorState
-                        title="Failed to load rules"
-                        description="The access rules workspace could not be loaded."
-                        onRetry={() => void rulesQuery.refetch()}
                     />
                 ) : rules.length === 0 ? (
                     <EmptyState

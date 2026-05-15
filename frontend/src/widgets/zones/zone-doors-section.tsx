@@ -23,12 +23,10 @@ import type { DoorDto } from '../../entities/door/types';
 import type { RoomDto } from '../../entities/room/api';
 import type { ZoneDto } from '../../entities/zone/types';
 import { CreateDoorDialog } from '../../features/doors/create-door/create-door-dialog';
-import { useDoorsQuery } from '../../features/doors/list-doors/use-doors-query';
 import { useToggleDoorActiveMutation } from '../../features/doors/toggle-door-active/use-toggle-door-active-mutation';
 import { UpdateDoorDialog } from '../../features/doors/update-door/update-door-dialog';
 import { CodeBadge } from '../../shared/ui/code-badge';
 import { EmptyState } from '../../shared/ui/empty-state';
-import { ErrorState } from '../../shared/ui/error-state';
 import { LoadingState } from '../../shared/ui/loading-state';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
@@ -36,24 +34,20 @@ import { StatusChip } from '../../shared/ui/status-chip';
 type Props = {
     zone: ZoneDto;
     rooms: RoomDto[];
+    doors: DoorDto[];
+    isLoading: boolean;
 };
 
 type ScopeFilter = 'all' | 'zone' | 'room';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
-export function ZoneDoorsSection({ zone, rooms }: Props) {
+export function ZoneDoorsSection({ zone, rooms, doors, isLoading }: Props) {
     const theme = useTheme();
     const [createOpen, setCreateOpen] = useState(false);
     const [editingDoor, setEditingDoor] = useState<DoorDto | null>(null);
     const [search, setSearch] = useState('');
     const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-
-    const doorsQuery = useDoorsQuery({
-        zoneId: zone.id,
-        page: 1,
-        pageSize: 100,
-    });
 
     const toggleMutation = useToggleDoorActiveMutation();
 
@@ -66,8 +60,6 @@ export function ZoneDoorsSection({ zone, rooms }: Props) {
 
         return map;
     }, [rooms]);
-
-    const doors = doorsQuery.data?.items ?? [];
 
     const filteredDoors = useMemo(() => {
         const normalizedSearch = search.trim().toLowerCase();
@@ -197,16 +189,10 @@ export function ZoneDoorsSection({ zone, rooms }: Props) {
 
                 <Divider />
 
-                {doorsQuery.isLoading ? (
+                {isLoading ? (
                     <LoadingState
                         title="Loading doors"
                         description="Please wait while zone doors are being loaded."
-                    />
-                ) : doorsQuery.isError ? (
-                    <ErrorState
-                        title="Failed to load doors"
-                        description="The doors list could not be loaded from the server."
-                        onRetry={() => void doorsQuery.refetch()}
                     />
                 ) : doors.length === 0 ? (
                     <EmptyState

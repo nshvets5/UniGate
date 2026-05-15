@@ -11,26 +11,30 @@ import {
     Tabs,
     Typography,
 } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
-import { AccessTargetType } from '../../entities/access-rule/types';
+import { AccessTargetType, type AccessRuleDto } from '../../entities/access-rule/types';
+import type { DoorDto } from '../../entities/door/types';
+import type { RoomDto } from '../../entities/room/api';
 import type { ZoneDto } from '../../entities/zone/types';
-import { useAccessRulesQuery } from '../../features/access-rules/list-access-rules/use-access-rules-query';
-import { useDoorsQuery } from '../../features/doors/list-doors/use-doors-query';
-import { useRoomsQuery } from '../../features/rooms/list-rooms/use-rooms-query';
 import { CodeBadge } from '../../shared/ui/code-badge';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
 import { ZoneDoorsSection } from './zone-doors-section';
+import { ZoneInsightsSection } from './zone-insights-section';
 import { ZoneRoomsSection } from './zone-rooms-section';
 import { ZoneRulesSection } from './zone-rules-section';
 import { ZoneTopologySection } from './zone-topology-section';
-import { ZoneInsightsSection } from './zone-insights-section';
 
 type Props = {
     zone: ZoneDto | null;
     zones: ZoneDto[];
+    rooms: RoomDto[];
+    doors: DoorDto[];
+    rules: AccessRuleDto[];
+    roomsLoading: boolean;
+    doorsLoading: boolean;
+    rulesLoading: boolean;
     onEdit: (zone: ZoneDto) => void;
     onToggleActive: (zone: ZoneDto) => void;
     isTogglePending: boolean;
@@ -41,34 +45,33 @@ type TabValue = 'overview' | 'rooms' | 'doors' | 'rules';
 export function ZoneDetailsPanel({
                                      zone,
                                      zones,
+                                     rooms,
+                                     doors,
+                                     rules,
+                                     roomsLoading,
+                                     doorsLoading,
+                                     rulesLoading,
                                      onEdit,
                                      onToggleActive,
                                      isTogglePending,
                                  }: Props) {
-    const theme = useTheme();
     const [tab, setTab] = useState<TabValue>('overview');
 
-    const roomsQuery = useRoomsQuery({ page: 1, pageSize: 200 });
-    const doorsQuery = useDoorsQuery({
-        zoneId: zone?.id,
-        page: 1,
-        pageSize: 200,
-    });
-    const rulesQuery = useAccessRulesQuery({ page: 1, pageSize: 200 });
-
-    const rooms = useMemo(
-        () => (roomsQuery.data?.items ?? []).filter((room) => room.zoneId === zone?.id),
-        [roomsQuery.data, zone?.id]
+    const zoneRooms = useMemo(
+        () => (zone ? rooms.filter((room) => room.zoneId === zone.id) : []),
+        [rooms, zone]
     );
 
-    const doors = doorsQuery.data?.items ?? [];
-    const rules = rulesQuery.data?.items ?? [];
+    const zoneDoors = useMemo(
+        () => (zone ? doors.filter((door) => door.zoneId === zone.id) : []),
+        [doors, zone]
+    );
 
-    const ruleCount = useMemo(() => {
-        if (!zone) return 0;
+    const zoneRules = useMemo(() => {
+        if (!zone) return [];
 
-        const roomIds = new Set(rooms.map((room) => room.id));
-        const doorIds = new Set(doors.map((door) => door.id));
+        const roomIds = new Set(zoneRooms.map((room) => room.id));
+        const doorIds = new Set(zoneDoors.map((door) => door.id));
 
         return rules.filter((rule) => {
             if (rule.targetType === AccessTargetType.Zone && rule.targetId === zone.id) {
@@ -84,8 +87,8 @@ export function ZoneDetailsPanel({
             }
 
             return false;
-        }).length;
-    }, [zone, rooms, doors, rules]);
+        });
+    }, [zone, zoneRooms, zoneDoors, rules]);
 
     if (!zone) {
         return (
@@ -175,9 +178,9 @@ export function ZoneDetailsPanel({
                     }}
                 >
                     <Tab value="overview" label="Overview" />
-                    <Tab value="rooms" label={`Rooms (${rooms.length})`} />
-                    <Tab value="doors" label={`Doors (${doors.length})`} />
-                    <Tab value="rules" label={`Rules (${ruleCount})`} />
+                    <Tab value="rooms" label={`Rooms (${zoneRooms.length})`} />
+                    <Tab value="doors" label={`Doors (${zoneDoors.length})`} />
+                    <Tab value="rules" label={`Rules (${zoneRules.length})`} />
                 </Tabs>
             </SectionCard>
 
@@ -185,53 +188,45 @@ export function ZoneDetailsPanel({
                 <>
                     <ZoneTopologySection
                         zone={zone}
-                        rooms={rooms}
-                        doors={doors}
-                        ruleCount={ruleCount}
+                        rooms={zoneRooms}
+                        doors={zoneDoors}
+                        ruleCount={zoneRules.length}
                     />
 
                     <ZoneInsightsSection
-                        rooms={rooms}
-                        doors={doors}
-                        rules={rules}
+                        rooms={zoneRooms}
+                        doors={zoneDoors}
+                        rules={zoneRules}
                     />
                 </>
             ) : null}
 
             {tab === 'rooms' ? (
-                <ZoneRoomsSection zone={zone} rooms={rooms} isLoading={roomsQuery.isLoading} />
+                <ZoneRoomsSection
+                    zone={zone}
+                    rooms={zoneRooms}
+                    isLoading={roomsLoading}
+                />
             ) : null}
 
-            {tab === 'doors' ? <ZoneDoorsSection zone={zone} rooms={rooms} /> : null}
+            {tab === 'doors' ? (
+                <ZoneDoorsSection
+                    zone={zone}
+                    rooms={zoneRooms}
+                    doors={zoneDoors}
+                    isLoading={doorsLoading}
+                />
+            ) : null}
 
             {tab === 'rules' ? (
                 <ZoneRulesSection
                     zone={zone}
-                    rooms={rooms}
-                    doors={doors}
+                    rooms={zoneRooms}
+                    doors={zoneDoors}
+                    rules={zoneRules}
+                    isLoading={rulesLoading}
                 />
             ) : null}
         </Stack>
-    );
-}
-
-function OverviewMetric({ label, value }: { label: string; value: string }) {
-    return (
-        <Box
-            sx={{
-                p: 2,
-                borderRadius: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-            }}
-        >
-            <Typography variant="body2" color="text.secondary">
-                {label}
-            </Typography>
-            <Typography variant="h5" sx={{ mt: 0.75 }}>
-                {value}
-            </Typography>
-        </Box>
     );
 }

@@ -1,6 +1,12 @@
 import { Box } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
+import type { AccessRuleDto } from '../entities/access-rule/types';
+import type { DoorDto } from '../entities/door/types';
+import type { RoomDto } from '../entities/room/api';
 import type { ZoneDto } from '../entities/zone/types';
+import { useAccessRulesQuery } from '../features/access-rules/list-access-rules/use-access-rules-query';
+import { useDoorsQuery } from '../features/doors/list-doors/use-doors-query';
+import { useRoomsQuery } from '../features/rooms/list-rooms/use-rooms-query';
 import { CreateZoneDialog } from '../features/zones/create-zone/create-zone-dialog';
 import { useZonesQuery } from '../features/zones/list-zones/use-zones-query';
 import { useToggleZoneActiveMutation } from '../features/zones/toggle-zone-active/use-toggle-zone-active-mutation';
@@ -27,9 +33,28 @@ export function ZonesPage() {
     );
 
     const zonesQuery = useZonesQuery(queryParams);
+
+    const roomsQuery = useRoomsQuery({
+        page: 1,
+        pageSize: 100,
+    });
+
+    const doorsQuery = useDoorsQuery({
+        page: 1,
+        pageSize: 100,
+    });
+
+    const rulesQuery = useAccessRulesQuery({
+        page: 1,
+        pageSize: 100,
+    });
+
     const toggleMutation = useToggleZoneActiveMutation();
 
     const zones = zonesQuery.data?.items ?? [];
+    const rooms = roomsQuery.data?.items ?? [];
+    const doors = doorsQuery.data?.items ?? [];
+    const rules = rulesQuery.data?.items ?? [];
 
     useEffect(() => {
         if (zones.length === 0) {
@@ -51,7 +76,13 @@ export function ZonesPage() {
         });
     };
 
-    if (zonesQuery.isError) {
+    const hasWorkspaceError =
+        zonesQuery.isError ||
+        roomsQuery.isError ||
+        doorsQuery.isError ||
+        rulesQuery.isError;
+
+    if (hasWorkspaceError) {
         return (
             <PageContainer>
                 <PageHeader
@@ -61,8 +92,13 @@ export function ZonesPage() {
 
                 <ErrorState
                     title="Failed to load access workspace"
-                    description="Zones could not be loaded from the server."
-                    onRetry={() => void zonesQuery.refetch()}
+                    description="One or more access workspace resources could not be loaded from the server."
+                    onRetry={() => {
+                        void zonesQuery.refetch();
+                        void roomsQuery.refetch();
+                        void doorsQuery.refetch();
+                        void rulesQuery.refetch();
+                    }}
                 />
             </PageContainer>
         );
@@ -88,9 +124,17 @@ export function ZonesPage() {
             >
                 <ZoneAccessTreePanel
                     zones={zones}
+                    rooms={rooms}
+                    doors={doors}
+                    rules={rules}
                     selectedZoneId={selectedZoneId}
                     search={search}
-                    isLoading={zonesQuery.isLoading}
+                    isLoading={
+                        zonesQuery.isLoading ||
+                        roomsQuery.isLoading ||
+                        doorsQuery.isLoading ||
+                        rulesQuery.isLoading
+                    }
                     onSearchChange={setSearch}
                     onCreateClick={() => setCreateOpen(true)}
                     onSelectZone={(zone) => setSelectedZoneId(zone.id)}
@@ -99,6 +143,12 @@ export function ZonesPage() {
                 <ZoneDetailsPanel
                     zone={selectedZone}
                     zones={zones}
+                    rooms={rooms}
+                    doors={doors}
+                    rules={rules}
+                    roomsLoading={roomsQuery.isLoading}
+                    doorsLoading={doorsQuery.isLoading}
+                    rulesLoading={rulesQuery.isLoading}
                     onEdit={(zone) => setEditingZone(zone)}
                     onToggleActive={(zone) => void handleToggleActive(zone)}
                     isTogglePending={

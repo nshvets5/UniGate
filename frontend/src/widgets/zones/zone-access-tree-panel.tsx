@@ -16,18 +16,18 @@ import {
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo } from 'react';
-import { AccessTargetType } from '../../entities/access-rule/types';
+import { AccessTargetType, type AccessRuleDto } from '../../entities/access-rule/types';
 import type { DoorDto } from '../../entities/door/types';
 import type { RoomDto } from '../../entities/room/api';
 import type { ZoneDto } from '../../entities/zone/types';
-import { useAccessRulesQuery } from '../../features/access-rules/list-access-rules/use-access-rules-query';
-import { useDoorsQuery } from '../../features/doors/list-doors/use-doors-query';
-import { useRoomsQuery } from '../../features/rooms/list-rooms/use-rooms-query';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
 
 type Props = {
     zones: ZoneDto[];
+    rooms: RoomDto[];
+    doors: DoorDto[];
+    rules: AccessRuleDto[];
     selectedZoneId: string | null;
     search: string;
     isLoading: boolean;
@@ -38,6 +38,9 @@ type Props = {
 
 export function ZoneAccessTreePanel({
                                         zones,
+                                        rooms,
+                                        doors,
+                                        rules,
                                         selectedZoneId,
                                         search,
                                         isLoading,
@@ -46,18 +49,6 @@ export function ZoneAccessTreePanel({
                                         onSelectZone,
                                     }: Props) {
     const theme = useTheme();
-
-    const roomsQuery = useRoomsQuery({ page: 1, pageSize: 100 });
-    const doorsQuery = useDoorsQuery({ page: 1, pageSize: 100 });
-    const rulesQuery = useAccessRulesQuery({
-        isActive: undefined,
-        page: 1,
-        pageSize: 100,
-    });
-
-    const rooms = roomsQuery.data?.items ?? [];
-    const doors = doorsQuery.data?.items ?? [];
-    const rules = rulesQuery.data?.items ?? [];
 
     const treeByZone = useMemo(() => {
         return zones.reduce<
@@ -109,9 +100,6 @@ export function ZoneAccessTreePanel({
         }, {});
     }, [zones, rooms, doors, rules]);
 
-    const isTreeLoading =
-        isLoading || roomsQuery.isLoading || doorsQuery.isLoading || rulesQuery.isLoading;
-
     return (
         <SectionCard
             sx={{
@@ -161,7 +149,7 @@ export function ZoneAccessTreePanel({
             <Divider />
 
             <Box sx={{ p: 1.5 }}>
-                {isTreeLoading ? (
+                {isLoading ? (
                     <Stack spacing={1}>
                         {[1, 2, 3].map((item) => (
                             <Skeleton key={item} height={170} sx={{ borderRadius: 3 }} />
