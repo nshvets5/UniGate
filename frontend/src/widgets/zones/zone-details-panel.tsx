@@ -25,6 +25,7 @@ import { StatusChip } from '../../shared/ui/status-chip';
 import { ZoneDoorsSection } from './zone-doors-section';
 import { ZoneRoomsSection } from './zone-rooms-section';
 import { ZoneRulesSection } from './zone-rules-section';
+import { ZoneTopologySection } from './zone-topology-section';
 
 type Props = {
     zone: ZoneDto | null;
@@ -180,42 +181,12 @@ export function ZoneDetailsPanel({
             </SectionCard>
 
             {tab === 'overview' ? (
-                <SectionCard>
-                    <Stack spacing={2.5}>
-                        <Typography variant="subtitle1">Zone overview</Typography>
-
-                        <Box
-                            sx={{
-                                display: 'grid',
-                                gridTemplateColumns: {
-                                    xs: '1fr',
-                                    md: 'repeat(4, 1fr)',
-                                },
-                                gap: 2,
-                            }}
-                        >
-                            <OverviewMetric label="Zone code" value={zone.code} />
-                            <OverviewMetric label="Rooms" value={String(rooms.length)} />
-                            <OverviewMetric label="Doors" value={String(doors.length)} />
-                            <OverviewMetric label="Rules" value={String(ruleCount)} />
-                        </Box>
-
-                        <Box
-                            sx={{
-                                p: 2.5,
-                                borderRadius: 3,
-                                border: '1px solid',
-                                borderColor: alpha(theme.palette.primary.main, 0.16),
-                                bgcolor: alpha(theme.palette.primary.main, 0.035),
-                            }}
-                        >
-                            <Typography variant="body2" color="text.secondary">
-                                Rules can now target a whole zone, a specific room or a specific
-                                door. Backend evaluates access in priority order: Door → Room → Zone.
-                            </Typography>
-                        </Box>
-                    </Stack>
-                </SectionCard>
+                <ZoneTopologySection
+                    zone={zone}
+                    rooms={rooms}
+                    doors={doors}
+                    ruleCount={ruleCount}
+                />
             ) : null}
 
             {tab === 'rooms' ? (
