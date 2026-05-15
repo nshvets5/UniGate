@@ -10,6 +10,7 @@ import type { ZoneDto } from '../../entities/zone/types';
 import { CodeBadge } from '../../shared/ui/code-badge';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
+import { ZoneTopologyGraph } from './zone-topology-graph';
 
 type Props = {
     zone: ZoneDto;
@@ -114,6 +115,12 @@ export function ZoneTopologySection({ zone, rooms, doors, ruleCount }: Props) {
                         </Stack>
                     </Box>
                 </Stack>
+
+                <ZoneTopologyGraph
+                    zone={zone}
+                    rooms={rooms}
+                    doors={doors}
+                />
             </Box>
         </SectionCard>
     );
