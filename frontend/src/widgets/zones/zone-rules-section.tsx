@@ -6,6 +6,7 @@ import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutli
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import {
     Box,
     Button,
@@ -35,6 +36,7 @@ import { ErrorState } from '../../shared/ui/error-state';
 import { LoadingState } from '../../shared/ui/loading-state';
 import { SectionCard } from '../../shared/ui/section-card';
 import { StatusChip } from '../../shared/ui/status-chip';
+import { UpdateAccessRuleDialog } from '../../features/access-rules/update-access-rule/update-access-rule-dialog';
 
 type Props = {
     zone: ZoneDto;
@@ -56,6 +58,7 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
     const theme = useTheme();
 
     const [createOpen, setCreateOpen] = useState(false);
+    const [editingRule, setEditingRule] = useState<AccessRuleDto | null>(null);
 
     const roomIds = useMemo(() => rooms.map((room) => room.id), [rooms]);
     const doorIds = useMemo(() => doors.map((door) => door.id), [doors]);
@@ -367,6 +370,12 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                                             direction="row"
                                             justifyContent="flex-end"
                                         >
+                                            <Tooltip title="Edit rule">
+                                                <IconButton onClick={() => setEditingRule(rule)}>
+                                                    <EditOutlinedIcon />
+                                                </IconButton>
+                                            </Tooltip>
+
                                             <Tooltip
                                                 title={
                                                     rule.isActive
@@ -413,6 +422,15 @@ export function ZoneRulesSection({ zone, rooms, doors }: Props) {
                 doors={doors}
                 groups={groupsQuery.data?.items ?? []}
                 onClose={() => setCreateOpen(false)}
+            />
+
+            <UpdateAccessRuleDialog
+                open={Boolean(editingRule)}
+                rule={editingRule}
+                zones={[zone]}
+                rooms={rooms}
+                doors={doors}
+                onClose={() => setEditingRule(null)}
             />
         </>
     );
