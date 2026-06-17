@@ -19,7 +19,7 @@ public sealed class ReaderScanAttemptsController : ApiControllerBase
         _list = list;
     }
 
-    [HttpGet("api/device/attempts")]
+    [HttpGet("api/readers/attempts")]
     public async Task<IActionResult> ListAll(
         [FromQuery] bool? isAllowed,
         [FromQuery] string? credentialType,

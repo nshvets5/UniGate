@@ -22,7 +22,7 @@ export type GetAttemptsParams = {
 };
 
 export async function getAttempts(params: GetAttemptsParams) {
-    const response = await api.get<PagedResult<AttemptDto>>('/device/attempts', {
+    const response = await api.get<PagedResult<AttemptDto>>('/readers/attempts', {
         params,
     });
 
