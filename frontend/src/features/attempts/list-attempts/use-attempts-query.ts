@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { getAttempts } from '../../../entities/attempt/api';
+import {
+    getAttempts,
+    type GetAttemptsParams,
+} from '../../../entities/attempt/api';
 
-export function useAttemptsQuery(params: any) {
+export function useAttemptsQuery(params: GetAttemptsParams) {
     return useQuery({
         queryKey: ['attempts', params],
         queryFn: () => getAttempts(params),

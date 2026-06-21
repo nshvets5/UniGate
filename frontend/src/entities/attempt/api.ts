@@ -6,7 +6,8 @@ export type AttemptDto = {
     readerId: string;
     credentialType: string;
     credentialValue: string;
-    studentId?: string;
+    credentialId?: string | null;
+    studentId?: string | null;
     isAllowed: boolean;
     reasonCode: string;
     occurredAt: string;
@@ -15,6 +16,7 @@ export type AttemptDto = {
 export type GetAttemptsParams = {
     isAllowed?: boolean;
     credentialType?: string;
+    credentialValue?: string;
     fromUtc?: string;
     toUtc?: string;
     page?: number;
