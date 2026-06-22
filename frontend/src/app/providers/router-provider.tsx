@@ -10,7 +10,7 @@ import { LoginPage } from '../../pages/login-page';
 import {AttemptsPage} from "../../pages/attempts-page.tsx";
 import { ReadersPage } from '../../pages/readers-page';
 import { ReaderDetailsPage } from '../../pages/reader-details-page';
-import { ReaderEmulatorPage } from '../../pages/reader-emulator-page';
+import { ReaderEmulatorPage } from '../../pages/emulator-page.tsx';
 import { AuditPage } from '../../pages/audit-page';
 import { TimetableBatchesPage } from '../../pages/timetable-batches-page';
 import { TimetableImportPage } from '../../pages/timetable-import-page';

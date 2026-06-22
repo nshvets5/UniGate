@@ -2,9 +2,9 @@ import { useMutation } from '@tanstack/react-query';
 import {
     scanReader,
     type CredentialType,
-} from '../../../entities/device-scan/api';
+} from '../../../entities/device-emulator/api';
 
-export function useScanReaderMutation() {
+export function useScanCredentialMutation() {
     return useMutation({
         mutationFn: ({
                          readerId,

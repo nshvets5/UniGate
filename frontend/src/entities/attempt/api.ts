@@ -30,3 +30,17 @@ export async function getAttempts(params: GetAttemptsParams) {
 
     return response.data;
 }
+
+export async function getReaderAttempts(
+    readerId: string,
+    params: GetAttemptsParams
+) {
+    const response = await api.get<PagedResult<AttemptDto>>(
+        `/readers/${readerId}/attempts`,
+        {
+            params,
+        }
+    );
+
+    return response.data;
+}

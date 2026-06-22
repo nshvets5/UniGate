@@ -4,7 +4,6 @@ import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import FilterAltOutlinedIcon from '@mui/icons-material/FilterAltOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
-import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import PercentOutlinedIcon from '@mui/icons-material/PercentOutlined';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
@@ -27,7 +26,11 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import { useMemo, useState, type ReactNode } from 'react';
 import type { AttemptDto, GetAttemptsParams } from '../entities/attempt/api';
+import type { ReaderDto } from '../entities/reader/api';
+import type { StudentDto } from '../entities/student/types';
 import { useAttemptsQuery } from '../features/attempts/list-attempts/use-attempts-query';
+import { useReadersQuery } from '../features/readers/list-readers/use-readers-query';
+import { useStudentQuery } from '../features/students/get-student/use-student-query';
 import { EmptyState } from '../shared/ui/empty-state';
 import { ErrorState } from '../shared/ui/error-state';
 import { LoadingState } from '../shared/ui/loading-state';
@@ -59,38 +62,42 @@ export function AttemptsPage() {
     const [pageSize, setPageSize] = useState(25);
     const [filters, setFilters] = useState<FiltersState>(defaultFilters);
     const [appliedFilters, setAppliedFilters] = useState<FiltersState>(defaultFilters);
-    const [selectedAttempt, setSelectedAttempt] = useState<AttemptDto | null>(null);
+    const [selectedAttempt, setSelectedAttempt] = useState<{
+        attempt: AttemptDto;
+        reader?: ReaderDto;
+    } | null>(null);
 
-    const queryParams = useMemo<GetAttemptsParams>(() => {
-        return {
-            ...buildAttemptFilters(appliedFilters),
-            page: page + 1,
-            pageSize,
-        };
-    }, [appliedFilters, page, pageSize]);
+    const queryParams = useMemo<GetAttemptsParams>(() => ({
+        ...buildAttemptFilters(appliedFilters),
+        page: page + 1,
+        pageSize,
+    }), [appliedFilters, page, pageSize]);
 
     const attemptsQuery = useAttemptsQuery(queryParams);
 
-    const totalStatsQuery = useAttemptsQuery({
+    const readersQuery = useReadersQuery({
         page: 1,
-        pageSize: 1,
+        pageSize: 100,
     });
 
-    const allowedStatsQuery = useAttemptsQuery({
-        isAllowed: true,
-        page: 1,
-        pageSize: 1,
-    });
-
-    const deniedStatsQuery = useAttemptsQuery({
-        isAllowed: false,
-        page: 1,
-        pageSize: 1,
-    });
+    const totalStatsQuery = useAttemptsQuery({ page: 1, pageSize: 1 });
+    const allowedStatsQuery = useAttemptsQuery({ isAllowed: true, page: 1, pageSize: 1 });
+    const deniedStatsQuery = useAttemptsQuery({ isAllowed: false, page: 1, pageSize: 1 });
 
     const attempts = attemptsQuery.data?.items ?? [];
-    const filteredTotal = attemptsQuery.data?.totalCount ?? 0;
+    const readers = readersQuery.data?.items ?? [];
 
+    const readerMap = useMemo(() => {
+        const map = new Map<string, ReaderDto>();
+
+        for (const reader of readers) {
+            map.set(reader.id, reader);
+        }
+
+        return map;
+    }, [readers]);
+
+    const filteredTotal = attemptsQuery.data?.totalCount ?? 0;
     const totalCount = totalStatsQuery.data?.totalCount ?? 0;
     const allowedCount = allowedStatsQuery.data?.totalCount ?? 0;
     const deniedCount = deniedStatsQuery.data?.totalCount ?? 0;
@@ -100,15 +107,12 @@ export function AttemptsPage() {
             ? Math.round((deniedCount / (allowedCount + deniedCount)) * 100)
             : 0;
 
-    const hasActiveFilters = useMemo(() => {
-        return (
-            appliedFilters.result !== 'all' ||
-            Boolean(appliedFilters.credentialType) ||
-            Boolean(appliedFilters.credentialValue) ||
-            Boolean(appliedFilters.fromLocal) ||
-            Boolean(appliedFilters.toLocal)
-        );
-    }, [appliedFilters]);
+    const hasActiveFilters =
+        appliedFilters.result !== 'all' ||
+        Boolean(appliedFilters.credentialType) ||
+        Boolean(appliedFilters.credentialValue) ||
+        Boolean(appliedFilters.fromLocal) ||
+        Boolean(appliedFilters.toLocal);
 
     const handleApplyFilters = () => {
         setPage(0);
@@ -123,6 +127,7 @@ export function AttemptsPage() {
 
     const handleRefresh = () => {
         void attemptsQuery.refetch();
+        void readersQuery.refetch();
         void totalStatsQuery.refetch();
         void allowedStatsQuery.refetch();
         void deniedStatsQuery.refetch();
@@ -397,7 +402,13 @@ export function AttemptsPage() {
                                 <AttemptRow
                                     key={attempt.id}
                                     attempt={attempt}
-                                    onOpen={() => setSelectedAttempt(attempt)}
+                                    reader={readerMap.get(attempt.readerId)}
+                                    onOpen={() =>
+                                        setSelectedAttempt({
+                                            attempt,
+                                            reader: readerMap.get(attempt.readerId),
+                                        })
+                                    }
                                 />
                             ))}
                         </Stack>
@@ -421,7 +432,7 @@ export function AttemptsPage() {
             </SectionCard>
 
             <AttemptDetailsDrawer
-                attempt={selectedAttempt}
+                selected={selectedAttempt}
                 onClose={() => setSelectedAttempt(null)}
             />
         </PageContainer>
@@ -430,12 +441,17 @@ export function AttemptsPage() {
 
 function AttemptRow({
                         attempt,
+                        reader,
                         onOpen,
                     }: {
     attempt: AttemptDto;
+    reader?: ReaderDto;
     onOpen: () => void;
 }) {
     const theme = useTheme();
+
+    const studentQuery = useStudentQuery(attempt.studentId ?? null);
+    const student = studentQuery.data;
 
     const color = attempt.isAllowed
         ? theme.palette.success.main
@@ -536,8 +552,12 @@ function AttemptRow({
                             Reader
                         </Typography>
 
-                        <Typography variant="body2" noWrap sx={{ fontFamily: 'monospace' }}>
-                            {shortId(attempt.readerId)}
+                        <Typography variant="body2" noWrap fontWeight={700}>
+                            {reader?.name ?? shortId(attempt.readerId)}
+                        </Typography>
+
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                            {reader?.code ?? attempt.readerId}
                         </Typography>
                     </Stack>
 
@@ -546,8 +566,23 @@ function AttemptRow({
                             Student
                         </Typography>
 
-                        <Typography variant="body2" noWrap sx={{ fontFamily: 'monospace' }}>
-                            {attempt.studentId ? shortId(attempt.studentId) : '—'}
+                        <Typography variant="body2" noWrap fontWeight={700}>
+                            {studentQuery.isLoading
+                                ? 'Loading student...'
+                                : student
+                                    ? formatStudentName(student)
+                                    : attempt.studentId
+                                        ? shortId(attempt.studentId)
+                                        : '—'}
+                        </Typography>
+
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                            {student?.email ??
+                                (attempt.studentId
+                                    ? studentQuery.isLoading
+                                        ? 'Resolving student details'
+                                        : attempt.studentId
+                                    : 'Unknown student')}
                         </Typography>
                     </Stack>
 
@@ -564,12 +599,21 @@ function AttemptRow({
 }
 
 function AttemptDetailsDrawer({
-                                  attempt,
+                                  selected,
                                   onClose,
                               }: {
-    attempt: AttemptDto | null;
+    selected: {
+        attempt: AttemptDto;
+        reader?: ReaderDto;
+    } | null;
     onClose: () => void;
 }) {
+    const attempt = selected?.attempt ?? null;
+    const reader = selected?.reader;
+
+    const studentDetailsQuery = useStudentQuery(attempt?.studentId ?? null);
+    const resolvedStudent = studentDetailsQuery.data;
+
     return (
         <Drawer
             anchor="right"
@@ -647,15 +691,35 @@ function AttemptDetailsDrawer({
 
                             <DetailSection title="Related entities">
                                 <DetailRow
+                                    label="Reader"
+                                    value={reader ? `${reader.name} (${reader.code})` : attempt.readerId}
+                                    monospace={!reader}
+                                />
+
+                                <DetailRow
                                     label="Reader ID"
                                     value={attempt.readerId}
                                     monospace
                                 />
+
+                                <DetailRow
+                                    label="Student"
+                                    value={
+                                        studentDetailsQuery.isLoading
+                                            ? 'Loading student...'
+                                            : resolvedStudent
+                                                ? `${formatStudentName(resolvedStudent)} (${resolvedStudent.email})`
+                                                : attempt.studentId ?? '—'
+                                    }
+                                    monospace={!resolvedStudent}
+                                />
+
                                 <DetailRow
                                     label="Student ID"
                                     value={attempt.studentId ?? '—'}
                                     monospace
                                 />
+
                                 <DetailRow
                                     label="Attempt ID"
                                     value={attempt.id}
@@ -860,6 +924,10 @@ function buildAttemptFilters(filters: FiltersState): Omit<GetAttemptsParams, 'pa
         fromUtc: filters.fromLocal ? new Date(filters.fromLocal).toISOString() : undefined,
         toUtc: filters.toLocal ? new Date(filters.toLocal).toISOString() : undefined,
     };
+}
+
+function formatStudentName(student: StudentDto) {
+    return `${student.lastName} ${student.firstName}`.trim();
 }
 
 function formatNumber(value: number) {
