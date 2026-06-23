@@ -1,25 +1,23 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    scanReader,
-    type CredentialType,
+    scanCredential,
+    type ScanRequest,
 } from '../../../entities/device-emulator/api';
 
 export function useScanCredentialMutation() {
+    const queryClient = useQueryClient();
+
     return useMutation({
-        mutationFn: ({
-                         readerId,
-                         apiKey,
-                         credentialType,
-                         credentialValue,
-                     }: {
-            readerId: string;
-            apiKey: string;
-            credentialType: CredentialType;
-            credentialValue: string;
-        }) =>
-            scanReader(readerId, apiKey, {
-                credentialType,
-                credentialValue,
-            }),
+        mutationFn: (payload: ScanRequest) => scanCredential(payload),
+
+        onSuccess: async (_, variables) => {
+            await queryClient.invalidateQueries({
+                queryKey: ['attempts'],
+            });
+
+            await queryClient.invalidateQueries({
+                queryKey: ['reader-attempts', variables.readerId],
+            });
+        },
     });
 }

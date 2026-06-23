@@ -10,7 +10,7 @@ import { LoginPage } from '../../pages/login-page';
 import {AttemptsPage} from "../../pages/attempts-page.tsx";
 import { ReadersPage } from '../../pages/readers-page';
 import { ReaderDetailsPage } from '../../pages/reader-details-page';
-import { ReaderEmulatorPage } from '../../pages/emulator-page.tsx';
+import { EmulatorPage  } from '../../pages/emulator-page.tsx';
 import { AuditPage } from '../../pages/audit-page';
 import { TimetableBatchesPage } from '../../pages/timetable-batches-page';
 import { TimetableImportPage } from '../../pages/timetable-import-page';
@@ -43,7 +43,7 @@ export function RouterProviderWrapper() {
                             <Route path="attempts" element={<AttemptsPage />} />
                             <Route path="readers" element={<ReadersPage />} />
                             <Route path="readers/:id" element={<ReaderDetailsPage />} />
-                            <Route path="emulator" element={<ReaderEmulatorPage />} />
+                            <Route path="emulator" element={<EmulatorPage  />} />
                             <Route path="audit" element={<AuditPage />} />
                             <Route path="timetable/import" element={<TimetableImportPage />} />
                             <Route path="timetable/batches" element={<TimetableBatchesPage />} />
