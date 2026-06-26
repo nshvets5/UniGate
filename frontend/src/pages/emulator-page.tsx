@@ -31,6 +31,12 @@ import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import type { DoorDto } from '../entities/door/types';
+import type { RoomDto } from '../entities/room/api';
+import type { ZoneDto } from '../entities/zone/types';
+import { useDoorsQuery } from '../features/doors/list-doors/use-doors-query';
+import { useRoomsQuery } from '../features/rooms/list-rooms/use-rooms-query';
+import { useZonesQuery } from '../features/zones/list-zones/use-zones-query';
 
 export function EmulatorPage() {
     const theme = useTheme();
@@ -43,14 +49,76 @@ export function EmulatorPage() {
     const [error, setError] = useState<string | null>(null);
 
     const readersQuery = useReadersQuery({ page: 1, pageSize: 100 });
+
+    const doorsQuery = useDoorsQuery({
+        page: 1,
+        pageSize: 100,
+    });
+
+    const roomsQuery = useRoomsQuery({
+        page: 1,
+        pageSize: 100,
+    });
+
+    const zonesQuery = useZonesQuery({
+        page: 1,
+        pageSize: 100,
+    });
+
     const scanMutation = useScanCredentialMutation();
 
     const readers = readersQuery.data?.items ?? [];
+
+    const doors = doorsQuery.data?.items ?? [];
+    const rooms = roomsQuery.data?.items ?? [];
+    const zones = zonesQuery.data?.items ?? [];
+
+    const doorMap = useMemo(() => {
+        const map = new Map<string, DoorDto>();
+
+        for (const door of doors) {
+            map.set(door.id, door);
+        }
+
+        return map;
+    }, [doors]);
+
+    const roomMap = useMemo(() => {
+        const map = new Map<string, RoomDto>();
+
+        for (const room of rooms) {
+            map.set(room.id, room);
+        }
+
+        return map;
+    }, [rooms]);
+
+    const zoneMap = useMemo(() => {
+        const map = new Map<string, ZoneDto>();
+
+        for (const zone of zones) {
+            map.set(zone.id, zone);
+        }
+
+        return map;
+    }, [zones]);
 
     const selectedReader = useMemo(
         () => readers.find((reader) => reader.id === readerId) ?? null,
         [readers, readerId]
     );
+
+    const selectedDoor = selectedReader?.doorId
+        ? doorMap.get(selectedReader.doorId) ?? null
+        : null;
+
+    const selectedRoom = selectedDoor?.roomId
+        ? roomMap.get(selectedDoor.roomId) ?? null
+        : null;
+
+    const selectedZone = selectedDoor?.zoneId
+        ? zoneMap.get(selectedDoor.zoneId) ?? null
+        : null;
 
     const attemptsQuery = useReaderAttemptsQuery(readerId, {
         page: 1,
@@ -103,6 +171,9 @@ export function EmulatorPage() {
                         startIcon={<RefreshOutlinedIcon />}
                         onClick={() => {
                             void readersQuery.refetch();
+                            void doorsQuery.refetch();
+                            void roomsQuery.refetch();
+                            void zonesQuery.refetch();
                             void attemptsQuery.refetch();
                         }}
                     >
@@ -176,7 +247,12 @@ export function EmulatorPage() {
                                 }}
                             />
 
-                            <ReaderIdentityCard reader={selectedReader} />
+                            <ReaderIdentityCard
+                                reader={selectedReader}
+                                door={selectedDoor}
+                                room={selectedRoom}
+                                zone={selectedZone}
+                            />
                         </Stack>
                     </SectionCard>
 
@@ -437,7 +513,17 @@ function EmulatorHeader({
     );
 }
 
-function ReaderIdentityCard({ reader }: { reader: any | null }) {
+function ReaderIdentityCard({
+                                reader,
+                                door,
+                                room,
+                                zone,
+                            }: {
+    reader: any | null;
+    door: DoorDto | null;
+    room: RoomDto | null;
+    zone: ZoneDto | null;
+}) {
     const theme = useTheme();
 
     if (!reader) {
@@ -470,7 +556,7 @@ function ReaderIdentityCard({ reader }: { reader: any | null }) {
                 bgcolor: alpha(theme.palette.primary.main, 0.035),
             }}
         >
-            <Stack spacing={1.25}>
+            <Stack spacing={1.75}>
                 <Stack spacing={0.4}>
                     <Typography variant="subtitle2">{reader.name}</Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -483,13 +569,76 @@ function ReaderIdentityCard({ reader }: { reader: any | null }) {
                         label={reader.isActive ? 'Active' : 'Inactive'}
                         variant={reader.isActive ? 'success' : 'warning'}
                     />
-                    <StatusChip label={`Door ${shortId(reader.doorId)}`} variant="info" />
+                    <StatusChip
+                        label={door ? 'Door linked' : 'Door missing'}
+                        variant={door ? 'info' : 'warning'}
+                    />
                 </Stack>
 
-                <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gap: 1,
+                    }}
+                >
+                    <ContextRow
+                        label="Door"
+                        value={door ? `${door.name} (${door.code})` : reader.doorId}
+                    />
+
+                    <ContextRow
+                        label="Room"
+                        value={
+                            room
+                                ? `${room.name} (${room.code})`
+                                : door?.roomId
+                                    ? door.roomId
+                                    : 'Zone-level entrance'
+                        }
+                    />
+
+                    <ContextRow
+                        label="Zone"
+                        value={zone ? `${zone.name} (${zone.code})` : door?.zoneId ?? '—'}
+                    />
+                </Box>
+
+                <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ wordBreak: 'break-all' }}
+                >
                     Reader ID: {reader.id}
                 </Typography>
             </Stack>
+        </Box>
+    );
+}
+
+function ContextRow({
+                        label,
+                        value,
+                    }: {
+    label: string;
+    value: string;
+}) {
+    return (
+        <Box
+            sx={{
+                p: 1.25,
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+            }}
+        >
+            <Typography variant="caption" color="text.secondary">
+                {label}
+            </Typography>
+
+            <Typography variant="body2" fontWeight={700} sx={{ wordBreak: 'break-word' }}>
+                {value}
+            </Typography>
         </Box>
     );
 }
