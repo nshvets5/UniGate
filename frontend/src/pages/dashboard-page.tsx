@@ -32,6 +32,7 @@ import { PageContainer } from '../shared/ui/page-container';
 import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
+import { DashboardHeroCard } from '../widgets/dashboard/dashboard-hero-card';
 
 function formatDateTime(value?: string | null) {
     if (!value) return '—';
@@ -165,7 +166,7 @@ export function DashboardPage() {
                     gap: 2,
                 }}
             >
-                <HeroMetricCard
+                <DashboardHeroCard
                     title="Reader devices"
                     value={formatNumber(readerStats.total)}
                     subtitle={`${readerStats.online} online · ${readerStats.offline} offline`}
@@ -175,7 +176,7 @@ export function DashboardPage() {
                     onClick={() => navigate('/admin/readers')}
                 />
 
-                <HeroMetricCard
+                <DashboardHeroCard
                     title="Access attempts"
                     value={formatNumber(totalAttempts)}
                     subtitle={`${formatNumber(allowedAttempts)} allowed · ${formatNumber(deniedAttempts)} denied`}
@@ -185,7 +186,7 @@ export function DashboardPage() {
                     onClick={() => navigate('/admin/attempts')}
                 />
 
-                <HeroMetricCard
+                <DashboardHeroCard
                     title="Timetable sync"
                     value={syncHealthy ? 'Healthy' : syncStatus?.isStale ? 'Stale' : syncHasError ? 'Error' : '—'}
                     subtitle={`Last success: ${formatDateTime(syncStatus?.lastSuccessUtc)}`}
@@ -195,7 +196,7 @@ export function DashboardPage() {
                     onClick={() => navigate('/admin/timetable/sync')}
                 />
 
-                <HeroMetricCard
+                <DashboardHeroCard
                     title="Audit events"
                     value={formatNumber(auditQuery.data?.totalCount ?? 0)}
                     subtitle="System and administrative activity"
