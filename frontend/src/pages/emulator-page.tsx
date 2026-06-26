@@ -5,6 +5,7 @@ import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
+import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
 import {
     Alert,
     Box,
@@ -41,11 +42,7 @@ export function EmulatorPage() {
     const [lastResult, setLastResult] = useState<ScanResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const readersQuery = useReadersQuery({
-        page: 1,
-        pageSize: 100,
-    });
-
+    const readersQuery = useReadersQuery({ page: 1, pageSize: 100 });
     const scanMutation = useScanCredentialMutation();
 
     const readers = readersQuery.data?.items ?? [];
@@ -91,7 +88,7 @@ export function EmulatorPage() {
 
             setLastResult(result);
         } catch {
-            setError('Scan request failed. Check reader, device key and credential data.');
+            setError('Scan request failed. Check selected reader, device key and credential value.');
         }
     };
 
@@ -99,7 +96,7 @@ export function EmulatorPage() {
         <PageContainer>
             <PageHeader
                 title="Reader emulator"
-                subtitle="Virtual device console for testing the access decision pipeline without physical hardware."
+                subtitle="Virtual device console for testing real access decisions without physical RFID or QR hardware."
                 actions={
                     <Button
                         variant="outlined"
@@ -119,7 +116,7 @@ export function EmulatorPage() {
                     display: 'grid',
                     gridTemplateColumns: {
                         xs: '1fr',
-                        xl: '420px minmax(0, 1fr)',
+                        xl: '430px minmax(0, 1fr)',
                     },
                     gap: 3,
                     alignItems: 'start',
@@ -127,30 +124,11 @@ export function EmulatorPage() {
             >
                 <Stack spacing={3}>
                     <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-                        <Box sx={{ p: 3 }}>
-                            <Stack direction="row" spacing={1.5} alignItems="center">
-                                <Box
-                                    sx={{
-                                        width: 46,
-                                        height: 46,
-                                        borderRadius: 3,
-                                        display: 'grid',
-                                        placeItems: 'center',
-                                        bgcolor: alpha(theme.palette.primary.main, 0.12),
-                                        color: 'primary.main',
-                                    }}
-                                >
-                                    <MemoryOutlinedIcon />
-                                </Box>
-
-                                <Stack spacing={0.35}>
-                                    <Typography variant="subtitle1">Reader identity</Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Select a registered reader and provide its one-time API key.
-                                    </Typography>
-                                </Stack>
-                            </Stack>
-                        </Box>
+                        <EmulatorHeader
+                            icon={<MemoryOutlinedIcon />}
+                            title="Reader identity"
+                            subtitle="Choose a registered reader and authenticate as a device."
+                        />
 
                         <Divider />
 
@@ -170,6 +148,7 @@ export function EmulatorPage() {
                                     onChange={(event) => {
                                         setReaderId(event.target.value);
                                         setLastResult(null);
+                                        setError(null);
                                     }}
                                     fullWidth
                                 >
@@ -187,73 +166,26 @@ export function EmulatorPage() {
                                 onChange={(event) => setDeviceKey(event.target.value)}
                                 fullWidth
                                 type="password"
-                                helperText="This is the secret API key returned when the reader was created or rotated."
+                                helperText="Use the API key shown after reader creation or key rotation."
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <KeyOutlinedIcon />
+                                            <VpnKeyOutlinedIcon />
                                         </InputAdornment>
                                     ),
                                 }}
                             />
 
-                            {selectedReader ? (
-                                <Box
-                                    sx={{
-                                        p: 2,
-                                        borderRadius: 3,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        bgcolor: alpha(theme.palette.primary.main, 0.035),
-                                    }}
-                                >
-                                    <Stack spacing={1}>
-                                        <Typography variant="subtitle2">
-                                            {selectedReader.name}
-                                        </Typography>
-
-                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                            <StatusChip label={selectedReader.code} variant="info" />
-                                            <StatusChip
-                                                label={selectedReader.isActive ? 'Active' : 'Inactive'}
-                                                variant={selectedReader.isActive ? 'success' : 'warning'}
-                                            />
-                                        </Stack>
-
-                                        <Typography variant="caption" color="text.secondary">
-                                            Door ID: {selectedReader.doorId}
-                                        </Typography>
-                                    </Stack>
-                                </Box>
-                            ) : null}
+                            <ReaderIdentityCard reader={selectedReader} />
                         </Stack>
                     </SectionCard>
 
                     <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-                        <Box sx={{ p: 3 }}>
-                            <Stack direction="row" spacing={1.5} alignItems="center">
-                                <Box
-                                    sx={{
-                                        width: 46,
-                                        height: 46,
-                                        borderRadius: 3,
-                                        display: 'grid',
-                                        placeItems: 'center',
-                                        bgcolor: alpha(theme.palette.primary.main, 0.12),
-                                        color: 'primary.main',
-                                    }}
-                                >
-                                    <TerminalOutlinedIcon />
-                                </Box>
-
-                                <Stack spacing={0.35}>
-                                    <Typography variant="subtitle1">Scan terminal</Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Submit a credential exactly as a physical reader would.
-                                    </Typography>
-                                </Stack>
-                            </Stack>
-                        </Box>
+                        <EmulatorHeader
+                            icon={<TerminalOutlinedIcon />}
+                            title="Scan terminal"
+                            subtitle="Submit credential data exactly like a physical reader."
+                        />
 
                         <Divider />
 
@@ -279,27 +211,49 @@ export function EmulatorPage() {
                                 value={credentialValue}
                                 onChange={(event) => setCredentialValue(event.target.value)}
                                 fullWidth
-                                placeholder="RFID-000001 / QR-000240"
+                                placeholder="RFID-000001 / QR-000240 / MANUAL-000001"
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <KeyOutlinedIcon />
+                                        </InputAdornment>
+                                    ),
+                                }}
                             />
 
-                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                {['RFID-000001', 'QR-000240', 'MANUAL-000001'].map((value) => (
-                                    <Button
-                                        key={value}
-                                        size="small"
-                                        variant="outlined"
-                                        onClick={() => {
-                                            setCredentialValue(value);
+                            <Box
+                                sx={{
+                                    p: 1.5,
+                                    borderRadius: 3,
+                                    border: '1px dashed',
+                                    borderColor: alpha(theme.palette.primary.main, 0.28),
+                                    bgcolor: alpha(theme.palette.primary.main, 0.035),
+                                }}
+                            >
+                                <Typography variant="caption" color="text.secondary">
+                                    Quick test credentials
+                                </Typography>
 
-                                            if (value.startsWith('RFID')) setCredentialType('rfid');
-                                            if (value.startsWith('QR')) setCredentialType('qr');
-                                            if (value.startsWith('MANUAL')) setCredentialType('manual');
-                                        }}
-                                    >
-                                        {value}
-                                    </Button>
-                                ))}
-                            </Stack>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                                    {[
+                                        { type: 'rfid' as DeviceCredentialType, value: 'RFID-000001' },
+                                        { type: 'qr' as DeviceCredentialType, value: 'QR-000240' },
+                                        { type: 'manual' as DeviceCredentialType, value: 'MANUAL-000001' },
+                                    ].map((item) => (
+                                        <Button
+                                            key={item.value}
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => {
+                                                setCredentialType(item.type);
+                                                setCredentialValue(item.value);
+                                            }}
+                                        >
+                                            {item.value}
+                                        </Button>
+                                    ))}
+                                </Stack>
+                            </Box>
 
                             <Button
                                 variant="contained"
@@ -313,8 +267,9 @@ export function EmulatorPage() {
                                 }
                                 onClick={() => void handleScan()}
                                 disabled={scanMutation.isPending}
+                                sx={{ py: 1.35 }}
                             >
-                                Run scan
+                                Run device scan
                             </Button>
                         </Stack>
                     </SectionCard>
@@ -322,21 +277,19 @@ export function EmulatorPage() {
 
                 <Stack spacing={3}>
                     <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-                        <Box sx={{ p: 3 }}>
-                            <Stack spacing={0.5}>
-                                <Typography variant="subtitle1">Decision result</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Backend response from the real access decision pipeline.
-                                </Typography>
-                            </Stack>
-                        </Box>
+                        <EmulatorHeader
+                            icon={lastResult?.allowed ? <CheckCircleOutlineOutlinedIcon /> : <BlockOutlinedIcon />}
+                            title="Decision result"
+                            subtitle="Response from the real backend access decision pipeline."
+                            tone={lastResult ? (lastResult.allowed ? 'success' : 'error') : 'primary'}
+                        />
 
                         <Divider />
 
                         {!lastResult ? (
                             <EmptyState
                                 title="No scan result yet"
-                                description="Run a scan from the terminal to see allow/deny decision."
+                                description="Select reader, enter device key and run a scan to see the decision."
                             />
                         ) : (
                             <Box sx={{ p: 3 }}>
@@ -351,12 +304,12 @@ export function EmulatorPage() {
                                 direction={{ xs: 'column', sm: 'row' }}
                                 justifyContent="space-between"
                                 alignItems={{ xs: 'flex-start', sm: 'center' }}
-                                spacing={1}
+                                spacing={1.5}
                             >
                                 <Stack spacing={0.5}>
                                     <Typography variant="subtitle1">Recent reader attempts</Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Latest attempts for the selected reader.
+                                        Latest scan attempts registered for the selected reader.
                                     </Typography>
                                 </Stack>
 
@@ -395,10 +348,11 @@ export function EmulatorPage() {
                                             justifyContent="space-between"
                                             alignItems={{ xs: 'flex-start', md: 'center' }}
                                         >
-                                            <Stack spacing={0.35}>
+                                            <Stack minWidth={0}>
                                                 <Typography
                                                     variant="body2"
-                                                    fontWeight={800}
+                                                    fontWeight={900}
+                                                    noWrap
                                                     sx={{
                                                         fontFamily:
                                                             'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
@@ -407,7 +361,8 @@ export function EmulatorPage() {
                                                     {attempt.credentialValue}
                                                 </Typography>
 
-                                                <Typography variant="caption" color="text.secondary">
+                                                <Typography variant="caption" color="text.secondary" noWrap>
+                                                    {attempt.credentialType.toUpperCase()} ·{' '}
                                                     {new Date(attempt.occurredAt).toLocaleString()}
                                                 </Typography>
                                             </Stack>
@@ -434,12 +389,115 @@ export function EmulatorPage() {
     );
 }
 
+function EmulatorHeader({
+                            icon,
+                            title,
+                            subtitle,
+                            tone = 'primary',
+                        }: {
+    icon: React.ReactNode;
+    title: string;
+    subtitle: string;
+    tone?: 'primary' | 'success' | 'error';
+}) {
+    const theme = useTheme();
+
+    const color =
+        tone === 'success'
+            ? theme.palette.success.main
+            : tone === 'error'
+                ? theme.palette.error.main
+                : theme.palette.primary.main;
+
+    return (
+        <Box sx={{ p: 3 }}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+                <Box
+                    sx={{
+                        width: 46,
+                        height: 46,
+                        borderRadius: 3,
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: alpha(color, 0.12),
+                        color,
+                    }}
+                >
+                    {icon}
+                </Box>
+
+                <Stack spacing={0.35}>
+                    <Typography variant="subtitle1">{title}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {subtitle}
+                    </Typography>
+                </Stack>
+            </Stack>
+        </Box>
+    );
+}
+
+function ReaderIdentityCard({ reader }: { reader: any | null }) {
+    const theme = useTheme();
+
+    if (!reader) {
+        return (
+            <Box
+                sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    border: '1px dashed',
+                    borderColor: 'divider',
+                    bgcolor: alpha(theme.palette.text.secondary, 0.025),
+                }}
+            >
+                <Typography variant="body2" color="text.secondary">
+                    Reader context will appear here after selection.
+                </Typography>
+            </Box>
+        );
+    }
+
+    return (
+        <Box
+            sx={{
+                p: 2,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: reader.isActive
+                    ? alpha(theme.palette.success.main, 0.28)
+                    : alpha(theme.palette.warning.main, 0.28),
+                bgcolor: alpha(theme.palette.primary.main, 0.035),
+            }}
+        >
+            <Stack spacing={1.25}>
+                <Stack spacing={0.4}>
+                    <Typography variant="subtitle2">{reader.name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {reader.code}
+                    </Typography>
+                </Stack>
+
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <StatusChip
+                        label={reader.isActive ? 'Active' : 'Inactive'}
+                        variant={reader.isActive ? 'success' : 'warning'}
+                    />
+                    <StatusChip label={`Door ${shortId(reader.doorId)}`} variant="info" />
+                </Stack>
+
+                <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+                    Reader ID: {reader.id}
+                </Typography>
+            </Stack>
+        </Box>
+    );
+}
+
 function DecisionPanel({ result }: { result: ScanResponse }) {
     const theme = useTheme();
 
-    const color = result.allowed
-        ? theme.palette.success.main
-        : theme.palette.error.main;
+    const color = result.allowed ? theme.palette.success.main : theme.palette.error.main;
 
     return (
         <Stack spacing={2.25}>
@@ -455,9 +513,9 @@ function DecisionPanel({ result }: { result: ScanResponse }) {
                 <Stack direction="row" spacing={1.5} alignItems="center">
                     <Box
                         sx={{
-                            width: 54,
-                            height: 54,
-                            borderRadius: 3.5,
+                            width: 58,
+                            height: 58,
+                            borderRadius: 4,
                             display: 'grid',
                             placeItems: 'center',
                             bgcolor: alpha(color, 0.14),
@@ -465,9 +523,9 @@ function DecisionPanel({ result }: { result: ScanResponse }) {
                         }}
                     >
                         {result.allowed ? (
-                            <CheckCircleOutlineOutlinedIcon />
+                            <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 32 }} />
                         ) : (
-                            <BlockOutlinedIcon />
+                            <BlockOutlinedIcon sx={{ fontSize: 32 }} />
                         )}
                     </Box>
 
@@ -478,6 +536,10 @@ function DecisionPanel({ result }: { result: ScanResponse }) {
 
                         <Typography variant="h4" fontWeight={900} sx={{ color }}>
                             {result.allowed ? 'ALLOWED' : 'DENIED'}
+                        </Typography>
+
+                        <Typography variant="body2" color="text.secondary">
+                            {result.reasonCode}
                         </Typography>
                     </Stack>
                 </Stack>
@@ -530,6 +592,11 @@ function DecisionRow({ label, value }: { label: string; value: string }) {
     );
 }
 
+function shortId(value?: string | null) {
+    if (!value) return '—';
+    return value.slice(0, 8);
+}
+
 function explainReason(reasonCode: string) {
     const normalized = reasonCode.toUpperCase();
 
@@ -537,23 +604,17 @@ function explainReason(reasonCode: string) {
         case 'ALLOW':
         case 'ALLOWED':
             return 'Access was granted by the access policy engine.';
-
         case 'DENY':
         case 'DENIED':
             return 'Access was rejected because no active access rule allowed this attempt.';
-
         case 'CREDENTIAL_NOT_FOUND':
             return 'Credential was not found in the directory.';
-
         case 'CREDENTIAL_INACTIVE':
             return 'Credential exists, but it is inactive.';
-
         case 'STUDENT_INACTIVE':
             return 'Student profile is inactive.';
-
         case 'READER_INACTIVE':
             return 'Reader exists, but it is inactive.';
-
         default:
             return 'Backend returned a domain-specific reason code.';
     }
