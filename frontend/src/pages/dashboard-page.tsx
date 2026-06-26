@@ -33,6 +33,9 @@ import { PageHeader } from '../shared/ui/page-header';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
 import { DashboardHeroCard } from '../widgets/dashboard/dashboard-hero-card';
+import { RecentActivityWidget } from '../widgets/dashboard/recent-activity-widget';
+import { ReaderStatusOverview } from '../widgets/dashboard/reader-status-overview';
+import { DashboardSystemHealthWidget } from '../widgets/dashboard/system-health-widget';
 
 function formatDateTime(value?: string | null) {
     if (!value) return '—';
@@ -233,7 +236,7 @@ export function DashboardPage() {
                     onOpen={() => navigate('/admin/readers')}
                 />
 
-                <SystemHealthWidget
+                <DashboardSystemHealthWidget
                     readersOffline={readerStats.offline}
                     syncHealthy={syncHealthy}
                     syncLoading={syncStatusQuery.isLoading}
@@ -268,117 +271,6 @@ export function DashboardPage() {
     );
 }
 
-function HeroMetricCard({
-                            title,
-                            value,
-                            subtitle,
-                            icon,
-                            tone,
-                            trend,
-                            onClick,
-                        }: {
-    title: string;
-    value: string;
-    subtitle: string;
-    icon: React.ReactNode;
-    tone: Tone;
-    trend: string;
-    onClick: () => void;
-}) {
-    const theme = useTheme();
-    const color = getToneColor(theme, tone);
-
-    return (
-        <SectionCard
-            onClick={onClick}
-            sx={{
-                p: 0,
-                overflow: 'hidden',
-                cursor: 'pointer',
-                minHeight: 178,
-                position: 'relative',
-                transition: 'transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
-                '&:hover': {
-                    transform: 'translateY(-3px)',
-                    borderColor: alpha(color, 0.35),
-                    boxShadow: `0 18px 45px ${alpha(color, 0.12)}`,
-                },
-            }}
-        >
-            <Box sx={{ p: 2.5, position: 'relative', zIndex: 1 }}>
-                <Stack spacing={2}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <IconBubble tone={tone}>{icon}</IconBubble>
-
-                        <StatusChip
-                            label={trend}
-                            variant={tone === 'primary' ? 'info' : tone}
-                        />
-                    </Stack>
-
-                    <Stack spacing={0.45}>
-                        <Typography variant="body2" color="text.secondary" fontWeight={700}>
-                            {title}
-                        </Typography>
-
-                        <Typography variant="h4" fontWeight={900}>
-                            {value}
-                        </Typography>
-
-                        <Typography variant="body2" color="text.secondary">
-                            {subtitle}
-                        </Typography>
-                    </Stack>
-
-                    <MiniSparkline tone={tone} />
-                </Stack>
-            </Box>
-        </SectionCard>
-    );
-}
-
-function RecentActivityWidget({
-                                  events,
-                                  isLoading,
-                                  isError,
-                                  onRetry,
-                                  onOpen,
-                              }: {
-    events: any[];
-    isLoading: boolean;
-    isError: boolean;
-    onRetry: () => void;
-    onOpen: () => void;
-}) {
-    return (
-        <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-            <WidgetHeader
-                icon={<HistoryOutlinedIcon />}
-                title="Recent system activity"
-                subtitle="Latest audit events and system changes."
-                actionLabel="View all activity"
-                onAction={onOpen}
-            />
-
-            <Divider />
-
-            {isLoading ? (
-                <LoadingState title="Loading activity" />
-            ) : isError ? (
-                <ErrorState title="Failed to load activity" onRetry={onRetry} />
-            ) : events.length === 0 ? (
-                <EmptyState title="No recent activity" description="Audit events will appear here." />
-            ) : (
-                <Stack divider={<Divider />}>
-                    {events.map((event) => (
-                        <ActivityRow key={event.id} event={event} />
-                    ))}
-                </Stack>
-            )}
-        </SectionCard>
-    );
-}
-
 function ActivityRow({ event }: { event: any }) {
     const variant = getActivityVariant(event.type);
 
@@ -404,87 +296,6 @@ function ActivityRow({ event }: { event: any }) {
                 </Typography>
             </Stack>
         </Box>
-    );
-}
-
-function ReaderStatusOverview({
-                                  total,
-                                  online,
-                                  offline,
-                                  active,
-                                  onOpen,
-                              }: {
-    total: number;
-    online: number;
-    offline: number;
-    active: number;
-    onOpen: () => void;
-}) {
-    const onlinePercent = total > 0 ? Math.round((online / total) * 100) : 0;
-
-    return (
-        <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-            <WidgetHeader
-                icon={<DevicesOutlinedIcon />}
-                title="Reader status overview"
-                subtitle="Real-time status of reader devices."
-            />
-
-            <Divider />
-
-            <Stack spacing={2.5} sx={{ p: 3 }} alignItems="center">
-                <DonutChart value={onlinePercent} label={String(total)} subtitle="Total readers" />
-
-                <Stack spacing={1.2} sx={{ width: '100%' }}>
-                    <LegendRow label="Online" value={online} tone="success" />
-                    <LegendRow label="Offline" value={offline} tone="warning" />
-                    <LegendRow label="Active" value={active} tone="info" />
-                </Stack>
-
-                <Button fullWidth variant="outlined" onClick={onOpen}>
-                    View all readers
-                </Button>
-            </Stack>
-        </SectionCard>
-    );
-}
-
-function SystemHealthWidget({
-                                readersOffline,
-                                syncHealthy,
-                                syncLoading,
-                                attemptsHealthy,
-                                onOpen,
-                            }: {
-    readersOffline: number;
-    syncHealthy: boolean;
-    syncLoading: boolean;
-    attemptsHealthy: boolean;
-    onOpen: () => void;
-}) {
-    return (
-        <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
-            <WidgetHeader
-                icon={<CheckCircleOutlineOutlinedIcon />}
-                title="System health"
-                subtitle="Core service status."
-            />
-
-            <Divider />
-
-            <Stack spacing={0} divider={<Divider />}>
-                <HealthRow label="Access service" healthy />
-                <HealthRow label="Reader connection" healthy={readersOffline === 0} />
-                <HealthRow label="Timetable sync" healthy={syncHealthy} loading={syncLoading} />
-                <HealthRow label="Attempts API" healthy={attemptsHealthy} />
-            </Stack>
-
-            <Box sx={{ p: 2.5 }}>
-                <Button fullWidth variant="outlined" onClick={onOpen}>
-                    View monitoring
-                </Button>
-            </Box>
-        </SectionCard>
     );
 }
 
@@ -764,62 +575,6 @@ function RecentAttemptRow({ attempt }: { attempt: AttemptDto }) {
     );
 }
 
-function LegendRow({
-                       label,
-                       value,
-                       tone,
-                   }: {
-    label: string;
-    value: number;
-    tone: Tone;
-}) {
-    const theme = useTheme();
-    const color = getToneColor(theme, tone);
-
-    return (
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" spacing={1} alignItems="center">
-                <Box
-                    sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        bgcolor: color,
-                    }}
-                />
-                <Typography variant="body2">{label}</Typography>
-            </Stack>
-
-            <Typography variant="body2" fontWeight={800}>
-                {value}
-            </Typography>
-        </Stack>
-    );
-}
-
-function HealthRow({
-                       label,
-                       healthy,
-                       loading,
-                   }: {
-    label: string;
-    healthy: boolean;
-    loading?: boolean;
-}) {
-    return (
-        <Box sx={{ px: 2.5, py: 1.75 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2">{label}</Typography>
-
-                <StatusChip
-                    label={loading ? 'Loading' : healthy ? 'Healthy' : 'Attention'}
-                    variant={loading ? 'info' : healthy ? 'success' : 'warning'}
-                />
-            </Stack>
-        </Box>
-    );
-}
-
 function IconBubble({
                         children,
                         tone,
@@ -846,97 +601,6 @@ function IconBubble({
             }}
         >
             {children}
-        </Box>
-    );
-}
-
-function MiniSparkline({ tone }: { tone: Tone }) {
-    const theme = useTheme();
-    const color = getToneColor(theme, tone);
-
-    return (
-        <Box
-            component="svg"
-            viewBox="0 0 220 42"
-            sx={{
-                width: '100%',
-                height: 42,
-                mt: 0.5,
-            }}
-        >
-            <path
-                d="M2 28 C24 24, 32 34, 52 28 S82 20, 100 27 S132 35, 154 24 S184 8, 218 16"
-                fill="none"
-                stroke={color}
-                strokeWidth="3"
-                strokeLinecap="round"
-            />
-        </Box>
-    );
-}
-
-function DonutChart({
-                        value,
-                        label,
-                        subtitle,
-                    }: {
-    value: number;
-    label: string;
-    subtitle: string;
-}) {
-    const theme = useTheme();
-    const radius = 48;
-    const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (value / 100) * circumference;
-
-    return (
-        <Box
-            sx={{
-                position: 'relative',
-                width: 152,
-                height: 152,
-            }}
-        >
-            <svg width="152" height="152" viewBox="0 0 152 152">
-                <circle
-                    cx="76"
-                    cy="76"
-                    r={radius}
-                    stroke={alpha(theme.palette.warning.main, 0.25)}
-                    strokeWidth="16"
-                    fill="none"
-                />
-
-                <circle
-                    cx="76"
-                    cy="76"
-                    r={radius}
-                    stroke={theme.palette.success.main}
-                    strokeWidth="16"
-                    fill="none"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
-                    strokeLinecap="round"
-                    transform="rotate(-90 76 76)"
-                />
-            </svg>
-
-            <Stack
-                sx={{
-                    position: 'absolute',
-                    inset: 0,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                }}
-            >
-                <Typography variant="h4" fontWeight={900}>
-                    {label}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                    {subtitle}
-                </Typography>
-            </Stack>
         </Box>
     );
 }
