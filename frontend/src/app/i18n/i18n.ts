@@ -124,6 +124,10 @@ void i18n.use(initReactI18next).init({
                 'groups.empty': 'No groups found',
                 'groups.emptyDescription': 'Create the first academic group to start working with the directory module.',
                 'groups.createFirst': 'Create first group',
+                'groups.code': 'Code',
+                'groups.name': 'Name',
+                'groups.createError': 'Failed to create group. Please check the input and try again.',
+                'groups.updateError': 'Failed to update group. Please check the input and try again.',
 
                 'attempts.title': 'Access attempts',
                 'attempts.subtitle': 'Operational console for access decisions, credentials and security events.',
@@ -327,6 +331,10 @@ void i18n.use(initReactI18next).init({
                 'groups.empty': 'Групи не знайдено',
                 'groups.emptyDescription': 'Створіть першу академічну групу для початку роботи з довідником.',
                 'groups.createFirst': 'Створити першу групу',
+                'groups.code': 'Код',
+                'groups.name': 'Назва',
+                'groups.createError': 'Не вдалося створити групу. Перевірте введені дані та спробуйте ще раз.',
+                'groups.updateError': 'Не вдалося оновити групу. Перевірте введені дані та спробуйте ще раз.',
 
                 'attempts.title': 'Спроби входу',
                 'attempts.subtitle': 'Операційна консоль рішень доступу, credential-ів і подій безпеки.',
