@@ -1,7 +1,10 @@
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
 import {
     Box,
     Button,
@@ -13,7 +16,7 @@ import {
     Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GroupDto } from '../entities/group/types';
 import { CreateGroupDialog } from '../features/groups/create-group/create-group-dialog';
@@ -36,11 +39,12 @@ import { StatusChip } from '../shared/ui/status-chip';
 export function GroupsPage() {
     const { t } = useTranslation();
     const theme = useTheme();
+
     const [search, setSearch] = useState('');
     const [createOpen, setCreateOpen] = useState(false);
     const [editingGroup, setEditingGroup] = useState<GroupDto | null>(null);
 
-    const desktopColumns = 'minmax(280px, 2fr) 170px 150px 150px';
+    const desktopColumns = 'minmax(320px, 2fr) 150px 150px 150px';
 
     const queryParams = useMemo(
         () => ({
@@ -54,6 +58,23 @@ export function GroupsPage() {
     const groupsQuery = useGroupsQuery(queryParams);
     const toggleMutation = useToggleGroupActiveMutation();
 
+    const groups = groupsQuery.data?.items ?? [];
+
+    const stats = useMemo(() => {
+        const active = groups.filter((group) => group.isActive).length;
+        const inactive = groups.length - active;
+        const latestAdmission = groups.length
+            ? Math.max(...groups.map((group) => group.admissionYear))
+            : null;
+
+        return {
+            total: groupsQuery.data?.totalCount ?? groups.length,
+            active,
+            inactive,
+            latestAdmission,
+        };
+    }, [groups, groupsQuery.data?.totalCount]);
+
     const handleToggleActive = async (group: GroupDto) => {
         await toggleMutation.mutateAsync({
             id: group.id,
@@ -65,85 +86,154 @@ export function GroupsPage() {
         <PageContainer>
             <PageHeader
                 title={t('pages.groups.title')}
-                subtitle="Manage academic groups, lifecycle state and directory metadata."
+                subtitle={t('pages.groups.subtitle')}
             />
+
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(2, minmax(0, 1fr))',
+                        xl: 'repeat(4, minmax(0, 1fr))',
+                    },
+                    gap: 2,
+                }}
+            >
+                <GroupMetricCard
+                    icon={<GroupsOutlinedIcon />}
+                    title={t('groups.total')}
+                    value={stats.total}
+                    description={t('groups.found', { count: stats.total })}
+                    tone="primary"
+                />
+
+                <GroupMetricCard
+                    icon={<ToggleOnOutlinedIcon />}
+                    title={t('groups.active')}
+                    value={stats.active}
+                    description={t('common.healthy')}
+                    tone="success"
+                />
+
+                <GroupMetricCard
+                    icon={<PauseCircleOutlineOutlinedIcon />}
+                    title={t('groups.inactive')}
+                    value={stats.inactive}
+                    description={stats.inactive > 0 ? t('common.attention') : t('common.healthy')}
+                    tone={stats.inactive > 0 ? 'warning' : 'success'}
+                />
+
+                <GroupMetricCard
+                    icon={<SchoolOutlinedIcon />}
+                    title={t('groups.latestAdmission')}
+                    value={stats.latestAdmission ?? '—'}
+                    description={t('groups.year')}
+                    tone="info"
+                />
+            </Box>
 
             <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
                 <Stack spacing={0}>
-                    <Stack sx={{ p: 3 }}>
+                    <Box sx={{ p: 3 }}>
+                        <Stack
+                            direction={{ xs: 'column', lg: 'row' }}
+                            justifyContent="space-between"
+                            alignItems={{ xs: 'stretch', lg: 'center' }}
+                            spacing={2}
+                        >
+                            <Stack spacing={0.75}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="subtitle1">
+                                        {t('pages.groups.title')}
+                                    </Typography>
+
+                                    <StatusChip
+                                        label={t('groups.found', {
+                                            count: groupsQuery.data?.totalCount ?? 0,
+                                        })}
+                                        variant="info"
+                                    />
+                                </Stack>
+
+                                <Typography variant="body2" color="text.secondary">
+                                    {t('pages.groups.subtitle')}
+                                </Typography>
+                            </Stack>
+
+                            <Button
+                                variant="contained"
+                                startIcon={<AddOutlinedIcon />}
+                                onClick={() => setCreateOpen(true)}
+                            >
+                                {t('groups.create')}
+                            </Button>
+                        </Stack>
+                    </Box>
+
+                    <Divider />
+
+                    <Box sx={{ p: 3 }}>
                         <EntityToolbar
                             searchValue={search}
                             onSearchChange={setSearch}
-                            searchPlaceholder="Search groups by code or name..."
-                            primaryAction={
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddOutlinedIcon />}
-                                    onClick={() => setCreateOpen(true)}
-                                >
-                                    Create group
-                                </Button>
-                            }
+                            searchPlaceholder={t('groups.search')}
                         />
-                    </Stack>
+                    </Box>
 
                     <Divider />
 
                     {groupsQuery.isLoading ? (
                         <LoadingState
-                            title="Loading groups"
-                            description="Please wait while academic groups are being loaded."
+                            title={t('states.loadingGroups', 'Loading groups')}
+                            description={t(
+                                'states.loadingGroupsDescription',
+                                'Please wait while academic groups are being loaded.'
+                            )}
                         />
                     ) : groupsQuery.isError ? (
                         <ErrorState
-                            title="Failed to load groups"
-                            description="The groups list could not be loaded from the server."
+                            title={t('states.failedToLoadGroups', 'Failed to load groups')}
+                            description={t(
+                                'states.failedToLoadGroupsDescription',
+                                'The groups list could not be loaded from the server.'
+                            )}
                             onRetry={() => void groupsQuery.refetch()}
                         />
-                    ) : !groupsQuery.data || groupsQuery.data.items.length === 0 ? (
+                    ) : groups.length === 0 ? (
                         <EmptyState
-                            title="No groups found"
-                            description="Create the first academic group to start working with the directory module."
+                            title={t('groups.empty')}
+                            description={t('groups.emptyDescription')}
                             action={
                                 <Button
                                     variant="contained"
                                     startIcon={<AddOutlinedIcon />}
                                     onClick={() => setCreateOpen(true)}
                                 >
-                                    Create first group
+                                    {t('groups.createFirst')}
                                 </Button>
                             }
                         />
                     ) : (
                         <Stack spacing={0} sx={{ p: 2.25 }}>
-                            <Box
-                                sx={{
-                                    px: 1,
-                                    pb: 2,
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    gap: 2,
-                                    flexWrap: 'wrap',
-                                }}
-                            >
-                                <Typography variant="body2" color="text.secondary">
-                                    Total records: {groupsQuery.data.totalCount}
-                                </Typography>
-                            </Box>
-
                             <EntityTable
                                 gridTemplateColumns={desktopColumns}
                                 columns={
                                     <>
-                                        <EntityTableHeaderCell>Name</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="center">Code</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="center">Status</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="right">Actions</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell>{t('groups.group')}</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">
+                                            {t('groups.year')}
+                                        </EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">
+                                            {t('groups.status')}
+                                        </EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="right">
+                                            {t('groups.actions')}
+                                        </EntityTableHeaderCell>
                                     </>
                                 }
                             >
-                                {groupsQuery.data.items.map((group) => {
+                                {groups.map((group) => {
                                     const isTogglingCurrent =
                                         toggleMutation.isPending &&
                                         toggleMutation.variables?.id === group.id;
@@ -167,35 +257,24 @@ export function GroupsPage() {
                                                     pl: { xs: 0, md: 1.25 },
                                                 }}
                                             >
-                                                <Stack spacing={0.45} minWidth={0}>
-                                                    <Typography variant="subtitle1" noWrap>
-                                                        {group.name}
-                                                    </Typography>
-
+                                                <Stack spacing={0.7} minWidth={0}>
                                                     <Stack
                                                         direction="row"
                                                         spacing={1}
                                                         alignItems="center"
-                                                        flexWrap="wrap"
-                                                        useFlexGap
+                                                        minWidth={0}
                                                     >
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Admission year: {group.admissionYear}
+                                                        <Typography variant="subtitle1" noWrap>
+                                                            {group.name}
                                                         </Typography>
 
-                                                        <Box
-                                                            sx={{
-                                                                width: 4,
-                                                                height: 4,
-                                                                borderRadius: '50%',
-                                                                bgcolor: alpha(theme.palette.text.secondary, 0.5),
-                                                            }}
-                                                        />
-
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Created {new Date(group.createdAt).toLocaleDateString()}
-                                                        </Typography>
+                                                        <CodeBadge value={group.code} />
                                                     </Stack>
+
+                                                    <Typography variant="body2" color="text.secondary" noWrap>
+                                                        {t('groups.created')}{' '}
+                                                        {new Date(group.createdAt).toLocaleDateString()}
+                                                    </Typography>
                                                 </Stack>
 
                                                 <Box
@@ -206,15 +285,10 @@ export function GroupsPage() {
                                                         minHeight: 40,
                                                     }}
                                                 >
-                                                    <Typography
-                                                        variant="body2"
-                                                        color="text.secondary"
-                                                        sx={{ display: { xs: 'inline', md: 'none' }, mr: 0.75 }}
-                                                    >
-                                                        Code:
-                                                    </Typography>
-
-                                                    <CodeBadge value={group.code} />
+                                                    <StatusChip
+                                                        label={String(group.admissionYear)}
+                                                        variant="info"
+                                                    />
                                                 </Box>
 
                                                 <Box
@@ -225,16 +299,12 @@ export function GroupsPage() {
                                                         minHeight: 40,
                                                     }}
                                                 >
-                                                    <Typography
-                                                        variant="body2"
-                                                        color="text.secondary"
-                                                        sx={{ display: { xs: 'inline', md: 'none' }, mr: 0.75 }}
-                                                    >
-                                                        Status:
-                                                    </Typography>
-
                                                     <StatusChip
-                                                        label={group.isActive ? 'Active' : 'Inactive'}
+                                                        label={
+                                                            group.isActive
+                                                                ? t('common.active')
+                                                                : t('common.inactive')
+                                                        }
                                                         variant={group.isActive ? 'success' : 'warning'}
                                                     />
                                                 </Box>
@@ -246,29 +316,33 @@ export function GroupsPage() {
                                                     alignItems="center"
                                                 >
                                                     <RowActions>
-                                                        <Tooltip title="Edit group">
+                                                        <Tooltip title={t('groups.edit')}>
                                                             <IconButton onClick={() => setEditingGroup(group)}>
                                                                 <EditOutlinedIcon />
                                                             </IconButton>
                                                         </Tooltip>
 
                                                         <Tooltip
-                                                            title={group.isActive ? 'Deactivate group' : 'Activate group'}
+                                                            title={
+                                                                group.isActive
+                                                                    ? t('groups.deactivate')
+                                                                    : t('groups.activate')
+                                                            }
                                                         >
-                              <span>
-                                <IconButton
-                                    onClick={() => void handleToggleActive(group)}
-                                    disabled={isTogglingCurrent}
-                                >
-                                  {isTogglingCurrent ? (
-                                      <CircularProgress size={18} />
-                                  ) : group.isActive ? (
-                                      <PauseCircleOutlineOutlinedIcon />
-                                  ) : (
-                                      <PlayCircleOutlineOutlinedIcon />
-                                  )}
-                                </IconButton>
-                              </span>
+                                                            <span>
+                                                                <IconButton
+                                                                    onClick={() => void handleToggleActive(group)}
+                                                                    disabled={isTogglingCurrent}
+                                                                >
+                                                                    {isTogglingCurrent ? (
+                                                                        <CircularProgress size={18} />
+                                                                    ) : group.isActive ? (
+                                                                        <PauseCircleOutlineOutlinedIcon />
+                                                                    ) : (
+                                                                        <PlayCircleOutlineOutlinedIcon />
+                                                                    )}
+                                                                </IconButton>
+                                                            </span>
                                                         </Tooltip>
                                                     </RowActions>
                                                 </Stack>
@@ -293,5 +367,64 @@ export function GroupsPage() {
                 onClose={() => setEditingGroup(null)}
             />
         </PageContainer>
+    );
+}
+
+function GroupMetricCard({
+                             icon,
+                             title,
+                             value,
+                             description,
+                             tone,
+                         }: {
+    icon: ReactNode;
+    title: string;
+    value: string | number;
+    description: string;
+    tone: 'primary' | 'success' | 'warning' | 'info';
+}) {
+    const theme = useTheme();
+
+    const color =
+        tone === 'success'
+            ? theme.palette.success.main
+            : tone === 'warning'
+                ? theme.palette.warning.main
+                : tone === 'info'
+                    ? theme.palette.info.main
+                    : theme.palette.primary.main;
+
+    return (
+        <SectionCard>
+            <Stack spacing={1.5}>
+                <Box
+                    sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 3,
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: alpha(color, 0.12),
+                        color,
+                    }}
+                >
+                    {icon}
+                </Box>
+
+                <Stack spacing={0.5}>
+                    <Typography variant="body2" color="text.secondary">
+                        {title}
+                    </Typography>
+
+                    <Typography variant="h5" fontWeight={900}>
+                        {value}
+                    </Typography>
+
+                    <Typography variant="caption" color="text.secondary">
+                        {description}
+                    </Typography>
+                </Stack>
+            </Stack>
+        </SectionCard>
     );
 }
