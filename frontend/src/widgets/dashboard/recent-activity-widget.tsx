@@ -3,6 +3,7 @@ import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { Box, Divider, Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ErrorState } from '../../shared/ui/error-state';
 import { LoadingState } from '../../shared/ui/loading-state';
@@ -37,26 +38,33 @@ export function RecentActivityWidget({
                                          onRetry,
                                          onOpen,
                                      }: Props) {
+    const { t } = useTranslation();
+
     return (
         <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
             <DashboardWidgetHeader
                 icon={<HistoryOutlinedIcon />}
-                title="Recent system activity"
-                subtitle="Latest audit events and system changes."
-                actionLabel="View all activity"
+                title={t('dashboard.recentActivity')}
+                subtitle={t('dashboard.recentActivitySubtitle')}
+                actionLabel={t('dashboard.viewAllActivity')}
                 onAction={onOpen}
             />
 
             <Divider />
 
             {isLoading ? (
-                <LoadingState title="Loading activity" />
+                <LoadingState
+                    title={t('states.loadingActivity')}
+                />
             ) : isError ? (
-                <ErrorState title="Failed to load activity" onRetry={onRetry} />
+                <ErrorState
+                    title={t('states.failedToLoadActivity')}
+                    onRetry={onRetry}
+                />
             ) : events.length === 0 ? (
                 <EmptyState
-                    title="No recent activity"
-                    description="Audit events will appear here."
+                    title={t('dashboard.noRecentActivity')}
+                    description={t('dashboard.recentActivitySubtitle')}
                 />
             ) : (
                 <Stack divider={<Divider />}>
@@ -71,6 +79,7 @@ export function RecentActivityWidget({
 
 function ActivityRow({ event }: { event: AuditEventLike }) {
     const variant = getActivityVariant(event.type);
+    const { t } = useTranslation();
 
     return (
         <Box sx={{ px: 2.5, py: 1.8 }}>
@@ -89,8 +98,8 @@ function ActivityRow({ event }: { event: AuditEventLike }) {
                     </Typography>
 
                     <Typography variant="body2" color="text.secondary" noWrap>
-                        {event.resourceType ?? 'System'} ·{' '}
-                        {event.actorSubject || event.actorProvider || 'System'}
+                        {event.resourceType ?? t('common.system')} ·
+                        {event.actorSubject || event.actorProvider || t('common.system')}
                     </Typography>
                 </Stack>
 

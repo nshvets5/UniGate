@@ -12,45 +12,47 @@ import {
     Divider,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SectionCard } from '../../shared/ui/section-card';
 import { DashboardWidgetHeader } from './dashboard-ui';
 
 export function QuickActionsWidget() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const actions = [
         {
-            label: 'Access Workspace',
+            label: t('dashboard.accessWorkspace'),
             icon: <ApartmentOutlinedIcon />,
             to: '/admin/zones',
         },
         {
-            label: 'Access Attempts',
+            label: t('navigation.attempts'),
             icon: <RuleOutlinedIcon />,
             to: '/admin/attempts',
         },
         {
-            label: 'Readers',
+            label: t('dashboard.readers'),
             icon: <SensorsOutlinedIcon />,
             to: '/admin/readers',
         },
         {
-            label: 'Audit Log',
+            label: t('dashboard.auditLog'),
             icon: <HistoryOutlinedIcon />,
             to: '/admin/audit',
         },
         {
-            label: 'Import Timetable',
+            label: t('dashboard.importTimetable'),
             icon: <CalendarMonthOutlinedIcon />,
             to: '/admin/timetable/import',
         },
         {
-            label: 'Timetable Sync',
+            label: t('dashboard.timetableSync'),
             icon: <SyncOutlinedIcon />,
             to: '/admin/timetable/sync',
         },
         {
-            label: 'Reader Emulator',
+            label: t('dashboard.readerEmulator'),
             icon: <LoginOutlinedIcon />,
             to: '/admin/emulator',
         },
@@ -60,8 +62,8 @@ export function QuickActionsWidget() {
         <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
             <DashboardWidgetHeader
                 icon={<ShieldOutlinedIcon />}
-                title="Quick actions"
-                subtitle="Common administrative workflows."
+                title={t('dashboard.quickActions')}
+                subtitle={t('dashboard.quickActionsSubtitle')}
             />
 
             <Divider />

@@ -7,6 +7,7 @@ import {
     Stack,
     Typography,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { alpha, useTheme } from '@mui/material/styles';
 import type { AttemptDto } from '../../entities/attempt/api';
 import { EmptyState } from '../../shared/ui/empty-state';
@@ -43,6 +44,7 @@ export function SyncAttemptsWidget({
                                        onOpenAttempts,
                                    }: Props) {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     return (
         <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
@@ -86,14 +88,14 @@ export function SyncAttemptsWidget({
 
                             <Stack>
                                 <Typography variant="subtitle1">
-                                    Timetable synchronization
+                                    {t('dashboard.timetableSync')}
                                 </Typography>
 
                                 <Typography
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    Rules synchronization health.
+                                    {t('dashboard.systemHealthSubtitle')}
                                 </Typography>
                             </Stack>
                         </Stack>
@@ -135,15 +137,15 @@ export function SyncAttemptsWidget({
                         <Stack textAlign="center">
                             <Typography variant="subtitle2">
                                 {syncHealthy
-                                    ? 'Synchronization is healthy'
-                                    : 'Synchronization needs attention'}
+                                    ? t('dashboard.systemHealthy')
+                                    : t('dashboard.needsAttention')}
                             </Typography>
 
                             <Typography
                                 variant="body2"
                                 color="text.secondary"
                             >
-                                Last success:{' '}
+                                {t('dashboard.lastSuccess')}:{' '}
                                 {formatDateTime(
                                     syncStatus?.lastSuccessUtc
                                 )}
@@ -154,7 +156,7 @@ export function SyncAttemptsWidget({
                             variant="outlined"
                             onClick={onOpenSync}
                         >
-                            Open sync diagnostics
+                            {t('dashboard.openSyncDiagnostics')}
                         </Button>
                     </Stack>
                 </Box>
@@ -168,15 +170,14 @@ export function SyncAttemptsWidget({
                         >
                             <Stack>
                                 <Typography variant="subtitle1">
-                                    Recent access decisions
+                                    {t('dashboard.recentAccessDecisions')}
                                 </Typography>
 
                                 <Typography
                                     variant="body2"
                                     color="text.secondary"
                                 >
-                                    Latest reader and emulator
-                                    attempts.
+                                    {t('dashboard.recentAccessDecisionsSubtitle')}
                                 </Typography>
                             </Stack>
 
@@ -184,21 +185,21 @@ export function SyncAttemptsWidget({
                                 size="small"
                                 onClick={onOpenAttempts}
                             >
-                                View all
+                                {t('dashboard.viewAllActivity')}
                             </Button>
                         </Stack>
 
                         {attemptsLoading ? (
                             <LoadingState
-                                title="Loading attempts"
+                                title={t('states.loadingAttempts')}
                             />
                         ) : attemptsError ? (
                             <ErrorState
-                                title="Failed to load attempts"
+                                title={t('states.failedToLoadAttempts')}
                             />
                         ) : attempts.length === 0 ? (
                             <EmptyState
-                                title="No attempts yet"
+                                title={t('dashboard.noAttemptsYet')}
                             />
                         ) : (
                             <Stack spacing={1.1}>

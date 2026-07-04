@@ -10,6 +10,7 @@ import {
     Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import type { ReaderDto } from '../../entities/reader/api';
 import type { TimetableSyncStatusDto } from '../../entities/timetable/api';
 import { SectionCard } from '../../shared/ui/section-card';
@@ -43,6 +44,7 @@ export function SystemStatusWidget({
                                        syncLoading,
                                    }: Props) {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     const onlineReaders = readers.filter((reader) =>
         isReaderOnline(reader.lastSeenAt)
@@ -66,14 +68,14 @@ export function SystemStatusWidget({
 
     const items = [
         {
-            label: 'API connectivity',
-            description: 'Frontend is connected to UniGate backend API.',
-            statusLabel: 'Available',
+            label: t('dashboard.apiConnectivity'),
+            description: t('dashboard.apiConnectivitySubtitle'),
+            statusLabel: t('dashboard.available'),
             variant: 'success' as const,
             icon: <CheckCircleOutlineOutlinedIcon />,
         },
         {
-            label: 'Reader fleet',
+            label: t('dashboard.readerFleet'),
             description: `${onlineReaders}/${readers.length} readers are currently online.`,
             statusLabel: readersLoading
                 ? 'Loading'
@@ -88,21 +90,21 @@ export function SystemStatusWidget({
             icon: <SensorsOutlinedIcon />,
         },
         {
-            label: 'Timetable sync',
+            label: t('dashboard.timetableSync'),
             description: syncStatus
                 ? `Last success: ${formatDateTime(syncStatus.lastSuccessUtc)}`
                 : 'Synchronization status is not available yet.',
             statusLabel: syncLoading
-                ? 'Loading'
+                ? t('common.loading')
                 : !syncStatus
-                    ? 'Unknown'
+                    ? t('dashboard.online')
                     : syncHasError
-                        ? 'Error'
+                        ? t('dashboard.syncError')
                         : syncStatus.isStale
-                            ? 'Stale'
+                            ? t('dashboard.syncStale')
                             : syncStatus.enabled
-                                ? 'Healthy'
-                                : 'Disabled',
+                                ? t('common.healthy')
+                                : t('common.disabled'),
             variant: syncLoading || !syncStatus
                 ? ('default' as const)
                 : syncHasError
@@ -139,9 +141,9 @@ export function SystemStatusWidget({
                     </Box>
 
                     <Stack spacing={0.35}>
-                        <Typography variant="subtitle1">System status</Typography>
+                        <Typography variant="subtitle1">{t('dashboard.systemStatus')}</Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Operational health summary for core UniGate subsystems.
+                            {t('dashboard.systemStatusSubtitle')}
                         </Typography>
                     </Stack>
                 </Stack>

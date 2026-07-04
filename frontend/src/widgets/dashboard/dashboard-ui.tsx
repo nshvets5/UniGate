@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatusChip } from '../../shared/ui/status-chip';
 
 export type DashboardTone = 'primary' | 'success' | 'warning' | 'error' | 'info';
@@ -70,7 +71,12 @@ export function DashboardWidgetHeader({
 }) {
     return (
         <Box sx={{ p: 3 }}>
-            <Stack direction="row" justifyContent="space-between" spacing={2}>
+            <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                justifyContent="space-between"
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                spacing={2}
+            >
                 <Stack direction="row" spacing={1.5} alignItems="center">
                     <DashboardIconBubble tone="primary">{icon}</DashboardIconBubble>
 
@@ -125,7 +131,8 @@ export function DashboardDonutChart({
     const theme = useTheme();
     const radius = 48;
     const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (value / 100) * circumference;
+    const normalizedValue = Math.max(0, Math.min(value, 100));
+    const offset = circumference - (normalizedValue / 100) * circumference;
 
     return (
         <Box sx={{ position: 'relative', width: 152, height: 152 }}>
@@ -215,13 +222,21 @@ export function DashboardHealthRow({
     healthy: boolean;
     loading?: boolean;
 }) {
+    const { t } = useTranslation();
+
     return (
         <Box sx={{ px: 2.5, py: 1.75 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography variant="body2">{label}</Typography>
 
                 <StatusChip
-                    label={loading ? 'Loading' : healthy ? 'Healthy' : 'Attention'}
+                    label={
+                        loading
+                            ? t('common.loading')
+                            : healthy
+                                ? t('common.healthy')
+                                : t('common.attention')
+                    }
                     variant={loading ? 'info' : healthy ? 'success' : 'warning'}
                 />
             </Stack>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import { Box, Button, Divider, Stack } from '@mui/material';
 import { SectionCard } from '../../shared/ui/section-card';
@@ -21,36 +22,44 @@ export function DashboardSystemHealthWidget({
                                                 attemptsHealthy,
                                                 onOpen,
                                             }: Props) {
+    const { t } = useTranslation();
+
     return (
         <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
             <DashboardWidgetHeader
                 icon={<CheckCircleOutlineOutlinedIcon />}
-                title="System health"
-                subtitle="Core service status."
+                title={t('dashboard.systemHealth')}
+                subtitle={t('dashboard.systemHealthSubtitle')}
             />
 
             <Divider />
 
             <Stack spacing={0} divider={<Divider />}>
-                <DashboardHealthRow label="Access service" healthy />
                 <DashboardHealthRow
-                    label="Reader connection"
+                    label={t('dashboard.accessService')}
+                    healthy
+                />
+
+                <DashboardHealthRow
+                    label={t('dashboard.readerConnection')}
                     healthy={readersOffline === 0}
                 />
+
                 <DashboardHealthRow
-                    label="Timetable sync"
+                    label={t('dashboard.timetableSync')}
                     healthy={syncHealthy}
                     loading={syncLoading}
                 />
+
                 <DashboardHealthRow
-                    label="Attempts API"
+                    label={t('dashboard.attemptsApi')}
                     healthy={attemptsHealthy}
                 />
             </Stack>
 
             <Box sx={{ p: 2.5 }}>
                 <Button fullWidth variant="outlined" onClick={onOpen}>
-                    View monitoring
+                    {t('dashboard.viewMonitoring')}
                 </Button>
             </Box>
         </SectionCard>

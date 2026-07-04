@@ -35,6 +35,7 @@ void i18n.use(initReactI18next).init({
                 'common.retry': 'Retry',
                 'common.yes': 'Yes',
                 'common.no': 'No',
+                'common.system': 'System',
 
                 'navigation.dashboard': 'Dashboard',
                 'navigation.groups': 'Groups',
@@ -90,6 +91,18 @@ void i18n.use(initReactI18next).init({
                 'dashboard.lastSuccess': 'Last success',
                 'dashboard.noRecentActivity': 'No recent activity',
                 'dashboard.noAttemptsYet': 'No attempts yet',
+                'dashboard.syncStale': 'Stale',
+                'dashboard.syncError': 'Error',
+                'dashboard.activity': 'Activity',
+                'dashboard.systemStatus': 'System status',
+                'dashboard.systemStatusSubtitle': 'Operational health summary for core UniGate subsystems.',
+                'dashboard.apiConnectivity': 'API connectivity',
+                'dashboard.apiConnectivitySubtitle': 'Frontend is connected to UniGate backend API.',
+                'dashboard.readerFleet': 'Reader fleet',
+                'dashboard.available': 'Available',
+                'dashboard.accessService': 'Access service',
+                'dashboard.readerConnection': 'Reader connection',
+                'dashboard.attemptsApi': 'Attempts API',
 
                 'attempts.title': 'Access attempts',
                 'attempts.subtitle': 'Operational console for access decisions, credentials and security events.',
@@ -167,7 +180,9 @@ void i18n.use(initReactI18next).init({
                 'states.loadingAttempts': 'Loading attempts',
                 'states.loadingReaders': 'Loading readers',
                 'states.failedToLoadAttempts': 'Failed to load attempts',
-                'states.failedToLoadReaders': 'Failed to load readers'
+                'states.failedToLoadReaders': 'Failed to load readers',
+                'states.loadingActivity': 'Loading activity',
+                'states.failedToLoadActivity': 'Failed to load activity'
             },
         },
         uk: {
@@ -202,6 +217,7 @@ void i18n.use(initReactI18next).init({
                 'common.retry': 'Повторити',
                 'common.yes': 'Так',
                 'common.no': 'Ні',
+                'common.system': 'Система',
 
                 'navigation.dashboard': 'Панель',
                 'navigation.groups': 'Групи',
@@ -257,6 +273,18 @@ void i18n.use(initReactI18next).init({
                 'dashboard.lastSuccess': 'Останній успіх',
                 'dashboard.noRecentActivity': 'Немає останньої активності',
                 'dashboard.noAttemptsYet': 'Спроб поки немає',
+                'dashboard.syncStale': 'Застаріла',
+                'dashboard.syncError': 'Помилка',
+                'dashboard.activity': 'Активність',
+                'dashboard.systemStatus': 'Стан системи',
+                'dashboard.systemStatusSubtitle': 'Зведення про стан основних підсистем UniGate.',
+                'dashboard.apiConnectivity': 'Підключення API',
+                'dashboard.apiConnectivitySubtitle': 'Frontend підключений до backend API UniGate.',
+                'dashboard.readerFleet': 'Парк зчитувачів',
+                'dashboard.available': 'Доступно',
+                'dashboard.accessService': 'Сервіс доступу',
+                'dashboard.readerConnection': 'Підключення зчитувачів',
+                'dashboard.attemptsApi': 'API спроб доступу',
 
                 'attempts.title': 'Спроби входу',
                 'attempts.subtitle': 'Операційна консоль рішень доступу, credential-ів і подій безпеки.',
@@ -334,7 +362,9 @@ void i18n.use(initReactI18next).init({
                 'states.loadingAttempts': 'Завантаження спроб',
                 'states.loadingReaders': 'Завантаження зчитувачів',
                 'states.failedToLoadAttempts': 'Не вдалося завантажити спроби',
-                'states.failedToLoadReaders': 'Не вдалося завантажити зчитувачі'
+                'states.failedToLoadReaders': 'Не вдалося завантажити зчитувачі',
+                'states.loadingActivity': 'Завантаження активності',
+                'states.failedToLoadActivity': 'Не вдалося завантажити активність'
             },
         },
     },

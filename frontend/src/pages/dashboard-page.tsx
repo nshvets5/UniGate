@@ -4,6 +4,7 @@ import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import { Box, Button, Stack } from '@mui/material';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAttemptsQuery } from '../features/attempts/list-attempts/use-attempts-query';
 import { useAuditEventsQuery } from '../features/audit/list-audit-events/use-audit-events-query';
@@ -38,6 +39,7 @@ function isReaderOnline(lastSeenAt?: string | null) {
 }
 
 export function DashboardPage() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     const readersQuery = useReadersQuery({ page: 1, pageSize: 100 });
@@ -107,6 +109,14 @@ export function DashboardPage() {
         !syncStatus.isStale &&
         !syncHasError;
 
+    const syncStatusLabel = syncHealthy
+        ? t('common.healthy')
+        : syncStatus?.isStale
+            ? t('dashboard.syncStale', 'Stale')
+            : syncHasError
+                ? t('dashboard.syncError', 'Error')
+                : '—';
+
     const systemHealthy =
         readerStats.offline === 0 &&
         syncHealthy &&
@@ -125,12 +135,16 @@ export function DashboardPage() {
     return (
         <PageContainer>
             <PageHeader
-                title="Operational dashboard"
-                subtitle="Real-time overview of access control infrastructure and system activity."
+                title={t('dashboard.title')}
+                subtitle={t('dashboard.subtitle')}
                 actions={
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <StatusChip
-                            label={systemHealthy ? 'System healthy' : 'Needs attention'}
+                            label={
+                                systemHealthy
+                                    ? t('dashboard.systemHealthy')
+                                    : t('dashboard.needsAttention')
+                            }
                             variant={systemHealthy ? 'success' : 'warning'}
                         />
 
@@ -139,7 +153,7 @@ export function DashboardPage() {
                             startIcon={<SyncOutlinedIcon />}
                             onClick={handleRefresh}
                         >
-                            Refresh
+                            {t('common.refresh')}
                         </Button>
                     </Stack>
                 }
@@ -157,19 +171,23 @@ export function DashboardPage() {
                 }}
             >
                 <DashboardHeroCard
-                    title="Reader devices"
+                    title={t('dashboard.readerDevices')}
                     value={formatNumber(readerStats.total)}
-                    subtitle={`${readerStats.online} online · ${readerStats.offline} offline`}
+                    subtitle={`${readerStats.online} ${t('dashboard.online')} · ${readerStats.offline} ${t('dashboard.offline')}`}
                     icon={<SensorsOutlinedIcon />}
                     tone={readerStats.offline > 0 ? 'warning' : 'success'}
-                    trend={readerStats.offline > 0 ? 'Attention' : 'Healthy'}
+                    trend={
+                        readerStats.offline > 0
+                            ? t('common.attention')
+                            : t('common.healthy')
+                    }
                     onClick={() => navigate('/admin/readers')}
                 />
 
                 <DashboardHeroCard
-                    title="Access attempts"
+                    title={t('dashboard.accessAttempts')}
                     value={formatNumber(totalAttempts)}
-                    subtitle={`${formatNumber(allowedAttempts)} allowed · ${formatNumber(deniedAttempts)} denied`}
+                    subtitle={`${formatNumber(allowedAttempts)} ${t('dashboard.allowed')} · ${formatNumber(deniedAttempts)} ${t('dashboard.denied')}`}
                     icon={<ShieldOutlinedIcon />}
                     tone={deniedAttempts > 0 ? 'info' : 'success'}
                     trend={`${successRate}%`}
@@ -177,17 +195,9 @@ export function DashboardPage() {
                 />
 
                 <DashboardHeroCard
-                    title="Timetable sync"
-                    value={
-                        syncHealthy
-                            ? 'Healthy'
-                            : syncStatus?.isStale
-                                ? 'Stale'
-                                : syncHasError
-                                    ? 'Error'
-                                    : '—'
-                    }
-                    subtitle={`Last success: ${formatDateTime(syncStatus?.lastSuccessUtc)}`}
+                    title={t('dashboard.timetableSync')}
+                    value={syncStatusLabel}
+                    subtitle={`${t('dashboard.lastSuccess')}: ${formatDateTime(syncStatus?.lastSuccessUtc)}`}
                     icon={<SyncOutlinedIcon />}
                     tone={syncHealthy ? 'success' : 'warning'}
                     trend={syncHealthy ? 'OK' : '!'}
@@ -195,12 +205,12 @@ export function DashboardPage() {
                 />
 
                 <DashboardHeroCard
-                    title="Audit events"
+                    title={t('dashboard.auditEvents')}
                     value={formatNumber(auditQuery.data?.totalCount ?? 0)}
-                    subtitle="System and administrative activity"
+                    subtitle={t('dashboard.systemActivity')}
                     icon={<HistoryOutlinedIcon />}
                     tone="primary"
-                    trend="Activity"
+                    trend={t('dashboard.activity', 'Activity')}
                     onClick={() => navigate('/admin/audit')}
                 />
             </Box>
@@ -236,7 +246,7 @@ export function DashboardPage() {
                     syncHealthy={syncHealthy}
                     syncLoading={syncStatusQuery.isLoading}
                     attemptsHealthy={deniedAttemptsQuery.isSuccess}
-                    onOpen={() => navigate('/admin/monitoring')}
+                    onOpen={() => navigate('/admin/attempts')}
                 />
             </Box>
 

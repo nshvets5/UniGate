@@ -1,4 +1,5 @@
 import { Box, Stack, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type { AttemptDto } from '../../entities/attempt/api';
 import { StatusChip } from '../../shared/ui/status-chip';
 
@@ -12,6 +13,9 @@ export function RecentAttemptRow({
                                  }: {
     attempt: AttemptDto;
 }) {
+
+    const { t } = useTranslation();
+
     return (
         <Box
             sx={{
@@ -51,7 +55,11 @@ export function RecentAttemptRow({
                 </Stack>
 
                 <StatusChip
-                    label={attempt.isAllowed ? 'ALLOW' : 'DENY'}
+                    label={
+                        attempt.isAllowed
+                            ? t('attempts.allowed')
+                            : t('attempts.denied')
+                    }
                     variant={attempt.isAllowed ? 'success' : 'error'}
                 />
             </Stack>
