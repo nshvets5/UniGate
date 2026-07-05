@@ -1,7 +1,11 @@
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import {
     Box,
@@ -9,22 +13,26 @@ import {
     CircularProgress,
     Divider,
     IconButton,
+    Pagination,
     Stack,
     Tooltip,
     Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { useMemo, useState } from 'react';
+import { useQueries } from '@tanstack/react-query';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import type { GroupDto } from '../entities/group/types';
+import { getStudentCredentials } from '../entities/student/api';
 import type { StudentDto } from '../entities/student/types';
 import { useGroupsQuery } from '../features/groups/list-groups/use-groups-query';
-import { CreateStudentDialog } from '../features/students/create-student/create-student-dialog';
 import { ChangeStudentGroupDialog } from '../features/students/change-student-group/change-student-group-dialog';
+import { CreateStudentDialog } from '../features/students/create-student/create-student-dialog';
 import { useStudentsQuery } from '../features/students/list-students/use-students-query';
 import { useToggleStudentActiveMutation } from '../features/students/toggle-student-active/use-toggle-student-active-mutation';
 import { UpdateStudentDialog } from '../features/students/update-student/update-student-dialog';
+import { queryKeys } from '../shared/api/query-keys';
 import { CodeBadge } from '../shared/ui/code-badge';
 import { EmptyState } from '../shared/ui/empty-state';
 import { EntityRow } from '../shared/ui/entity-row';
@@ -38,12 +46,16 @@ import { RowActions } from '../shared/ui/row-actions';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
 
+const PAGE_SIZE = 20;
+
 export function StudentsPage() {
     const { t } = useTranslation();
     const theme = useTheme();
     const navigate = useNavigate();
 
-    const desktopColumns = 'minmax(280px, 2fr) 180px 140px 180px';
+    const desktopColumns = 'minmax(340px, 2fr) 170px 150px 170px';
+
+    const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
     const [createOpen, setCreateOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState<StudentDto | null>(null);
@@ -52,18 +64,27 @@ export function StudentsPage() {
     const studentQueryParams = useMemo(
         () => ({
             search: search || undefined,
-            page: 1,
-            pageSize: 20,
+            page,
+            pageSize: PAGE_SIZE,
         }),
-        [search]
+        [search, page]
     );
 
     const studentsQuery = useStudentsQuery(studentQueryParams);
-    const groupsQuery = useGroupsQuery({
-        page: 1,
-        pageSize: 100,
-    });
+    const groupsQuery = useGroupsQuery({ page: 1, pageSize: 100 });
     const toggleMutation = useToggleStudentActiveMutation();
+
+    const students = studentsQuery.data?.items ?? [];
+    const totalCount = studentsQuery.data?.totalCount ?? 0;
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+    const credentialQueries = useQueries({
+        queries: students.map((student) => ({
+            queryKey: queryKeys.students.credentials(student.id),
+            queryFn: () => getStudentCredentials(student.id),
+            enabled: students.length > 0,
+        })),
+    });
 
     const groupMap = useMemo(() => {
         const map = new Map<string, GroupDto>();
@@ -74,6 +95,30 @@ export function StudentsPage() {
 
         return map;
     }, [groupsQuery.data]);
+
+    const stats = useMemo(() => {
+        const withCredentials = credentialQueries.filter(
+            (query) => (query.data?.length ?? 0) > 0
+        ).length;
+
+        return {
+            total: totalCount,
+            pageStudents: students.length,
+            groups: groupsQuery.data?.totalCount ?? groupsQuery.data?.items.length ?? 0,
+            withCredentials,
+        };
+    }, [
+        students.length,
+        credentialQueries,
+        totalCount,
+        groupsQuery.data?.totalCount,
+        groupsQuery.data?.items.length,
+    ]);
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        setPage(1);
+    };
 
     const handleToggleActive = async (student: StudentDto) => {
         await toggleMutation.mutateAsync({
@@ -90,46 +135,120 @@ export function StudentsPage() {
         <PageContainer>
             <PageHeader
                 title={t('pages.students.title')}
-                subtitle="Manage students, IAM bindings and access credentials."
+                subtitle={t('pages.students.subtitle')}
             />
+
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(2, minmax(0, 1fr))',
+                        xl: 'repeat(4, minmax(0, 1fr))',
+                    },
+                    gap: 2,
+                }}
+            >
+                <StudentMetricCard
+                    icon={<PersonOutlineOutlinedIcon />}
+                    title={t('students.total')}
+                    value={stats.total}
+                    description={t('students.found', { count: stats.total })}
+                    tone="primary"
+                />
+
+                <StudentMetricCard
+                    icon={<GroupsOutlinedIcon />}
+                    title={t('students.academicGroups')}
+                    value={stats.groups}
+                    description={t('students.academicGroupsDescription')}
+                    tone="info"
+                />
+
+                <StudentMetricCard
+                    icon={<BadgeOutlinedIcon />}
+                    title={t('students.pageStudents')}
+                    value={stats.pageStudents}
+                    description={t('students.pageStudentsDescription')}
+                    tone="success"
+                />
+
+                <StudentMetricCard
+                    icon={<KeyOutlinedIcon />}
+                    title={t('students.withCredentials')}
+                    value={stats.withCredentials}
+                    description={t('students.credentialsCoverage', {
+                        count: stats.withCredentials,
+                        total: stats.pageStudents,
+                    })}
+                    tone="warning"
+                />
+            </Box>
 
             <SectionCard sx={{ p: 0, overflow: 'hidden' }}>
                 <Stack spacing={0}>
-                    <Stack sx={{ p: 3 }}>
+                    <Box sx={{ p: 3 }}>
+                        <Stack
+                            direction={{ xs: 'column', lg: 'row' }}
+                            justifyContent="space-between"
+                            alignItems={{ xs: 'stretch', lg: 'center' }}
+                            spacing={2}
+                        >
+                            <Stack spacing={0.75}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="subtitle1">
+                                        {t('pages.students.title')}
+                                    </Typography>
+
+                                    <StatusChip
+                                        label={t('students.found', { count: totalCount })}
+                                        variant="info"
+                                    />
+                                </Stack>
+
+                                <Typography variant="body2" color="text.secondary">
+                                    {t('pages.students.subtitle')}
+                                </Typography>
+                            </Stack>
+
+                            <Button
+                                variant="contained"
+                                startIcon={<AddOutlinedIcon />}
+                                onClick={() => setCreateOpen(true)}
+                                disabled={groupsQuery.isLoading || groupsQuery.isError}
+                            >
+                                {t('students.create')}
+                            </Button>
+                        </Stack>
+                    </Box>
+
+                    <Divider />
+
+                    <Box sx={{ p: 3 }}>
                         <EntityToolbar
                             searchValue={search}
-                            onSearchChange={setSearch}
-                            searchPlaceholder="Search students by name or email..."
-                            primaryAction={
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddOutlinedIcon />}
-                                    onClick={() => setCreateOpen(true)}
-                                    disabled={groupsQuery.isLoading || groupsQuery.isError}
-                                >
-                                    Create student
-                                </Button>
-                            }
+                            onSearchChange={handleSearchChange}
+                            searchPlaceholder={t('students.search')}
                         />
-                    </Stack>
+                    </Box>
 
                     <Divider />
 
                     {studentsQuery.isLoading ? (
                         <LoadingState
-                            title="Loading students"
-                            description="Please wait while student records are being loaded."
+                            title={t('states.loadingStudents')}
+                            description={t('states.loadingStudentsDescription')}
                         />
                     ) : studentsQuery.isError ? (
                         <ErrorState
-                            title="Failed to load students"
-                            description="The students list could not be loaded from the server."
+                            title={t('states.failedToLoadStudents')}
+                            description={t('states.failedToLoadStudentsDescription')}
                             onRetry={() => void studentsQuery.refetch()}
                         />
-                    ) : !studentsQuery.data || studentsQuery.data.items.length === 0 ? (
+                    ) : students.length === 0 ? (
                         <EmptyState
-                            title="No students found"
-                            description="Create the first student record to start managing the directory."
+                            title={t('students.empty')}
+                            description={t('students.emptyDescription')}
                             action={
                                 <Button
                                     variant="contained"
@@ -137,42 +256,32 @@ export function StudentsPage() {
                                     onClick={() => setCreateOpen(true)}
                                     disabled={groupsQuery.isLoading || groupsQuery.isError}
                                 >
-                                    Create first student
+                                    {t('students.createFirst')}
                                 </Button>
                             }
                         />
                     ) : (
                         <Stack spacing={0} sx={{ p: 2.25 }}>
-                            <Box
-                                sx={{
-                                    px: 1,
-                                    pb: 2,
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    gap: 2,
-                                    flexWrap: 'wrap',
-                                }}
-                            >
-                                <Typography variant="body2" color="text.secondary">
-                                    Total records: {studentsQuery.data.totalCount}
-                                </Typography>
-                            </Box>
-
                             <EntityTable
                                 gridTemplateColumns={desktopColumns}
                                 columns={
                                     <>
-                                        <EntityTableHeaderCell>Student</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="center">Group</EntityTableHeaderCell>
-                                        <EntityTableHeaderCell align="center">Status</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell>
+                                            {t('students.student')}
+                                        </EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">
+                                            {t('students.group')}
+                                        </EntityTableHeaderCell>
+                                        <EntityTableHeaderCell align="center">
+                                            {t('students.status')}
+                                        </EntityTableHeaderCell>
                                         <EntityTableHeaderCell align="right">
-                                            Actions
+                                            {t('students.actions')}
                                         </EntityTableHeaderCell>
                                     </>
                                 }
                             >
-                                {studentsQuery.data.items.map((student) => {
+                                {students.map((student) => {
                                     const group = groupMap.get(student.groupId);
 
                                     const fullName = [
@@ -206,7 +315,7 @@ export function StudentsPage() {
                                                     pl: { xs: 0, md: 1.25 },
                                                 }}
                                             >
-                                                <Stack spacing={0.45} minWidth={0}>
+                                                <Stack spacing={0.7} minWidth={0}>
                                                     <Box
                                                         component="button"
                                                         type="button"
@@ -254,9 +363,11 @@ export function StudentsPage() {
                                                                         bgcolor: alpha(theme.palette.text.secondary, 0.5),
                                                                     }}
                                                                 />
-                                                                <Typography variant="body2" color="text.secondary">
-                                                                    IAM linked
-                                                                </Typography>
+
+                                                                <StatusChip
+                                                                    label={t('students.iamLinked')}
+                                                                    variant="info"
+                                                                />
                                                             </>
                                                         ) : null}
                                                     </Stack>
@@ -277,14 +388,14 @@ export function StudentsPage() {
                                                         color="text.secondary"
                                                         sx={{ display: { xs: 'inline', md: 'none' }, mr: 0.75 }}
                                                     >
-                                                        Group:
+                                                        {t('students.group')}:
                                                     </Typography>
 
                                                     {group ? (
                                                         <CodeBadge value={group.code} />
                                                     ) : (
                                                         <Typography variant="body2" color="text.secondary">
-                                                            Unknown group
+                                                            {t('students.unknownGroup')}
                                                         </Typography>
                                                     )}
                                                 </Box>
@@ -302,11 +413,15 @@ export function StudentsPage() {
                                                         color="text.secondary"
                                                         sx={{ display: { xs: 'inline', md: 'none' }, mr: 0.75 }}
                                                     >
-                                                        Status:
+                                                        {t('students.status')}:
                                                     </Typography>
 
                                                     <StatusChip
-                                                        label={student.isActive ? 'Active' : 'Inactive'}
+                                                        label={
+                                                            student.isActive
+                                                                ? t('common.active')
+                                                                : t('common.inactive')
+                                                        }
                                                         variant={student.isActive ? 'success' : 'warning'}
                                                     />
                                                 </Box>
@@ -318,13 +433,13 @@ export function StudentsPage() {
                                                     alignItems="center"
                                                 >
                                                     <RowActions>
-                                                        <Tooltip title="Edit student">
+                                                        <Tooltip title={t('students.edit')}>
                                                             <IconButton onClick={() => setEditingStudent(student)}>
                                                                 <EditOutlinedIcon />
                                                             </IconButton>
                                                         </Tooltip>
 
-                                                        <Tooltip title="Change student group">
+                                                        <Tooltip title={t('students.changeGroup')}>
                                                             <IconButton
                                                                 onClick={() => setGroupChangingStudent(student)}
                                                                 disabled={groupsQuery.isLoading || groupsQuery.isError}
@@ -336,24 +451,24 @@ export function StudentsPage() {
                                                         <Tooltip
                                                             title={
                                                                 student.isActive
-                                                                    ? 'Deactivate student'
-                                                                    : 'Activate student'
+                                                                    ? t('students.deactivate')
+                                                                    : t('students.activate')
                                                             }
                                                         >
-                              <span>
-                                <IconButton
-                                    onClick={() => void handleToggleActive(student)}
-                                    disabled={isTogglingCurrent}
-                                >
-                                  {isTogglingCurrent ? (
-                                      <CircularProgress size={18} />
-                                  ) : student.isActive ? (
-                                      <PauseCircleOutlineOutlinedIcon />
-                                  ) : (
-                                      <PlayCircleOutlineOutlinedIcon />
-                                  )}
-                                </IconButton>
-                              </span>
+                                                            <span>
+                                                                <IconButton
+                                                                    onClick={() => void handleToggleActive(student)}
+                                                                    disabled={isTogglingCurrent}
+                                                                >
+                                                                    {isTogglingCurrent ? (
+                                                                        <CircularProgress size={18} />
+                                                                    ) : student.isActive ? (
+                                                                        <PauseCircleOutlineOutlinedIcon />
+                                                                    ) : (
+                                                                        <PlayCircleOutlineOutlinedIcon />
+                                                                    )}
+                                                                </IconButton>
+                                                            </span>
                                                         </Tooltip>
                                                     </RowActions>
                                                 </Stack>
@@ -362,6 +477,28 @@ export function StudentsPage() {
                                     );
                                 })}
                             </EntityTable>
+
+                            {totalPages > 1 ? (
+                                <>
+                                    <Divider sx={{ my: 2 }} />
+
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            py: 1,
+                                        }}
+                                    >
+                                        <Pagination
+                                            page={page}
+                                            count={totalPages}
+                                            onChange={(_, value) => setPage(value)}
+                                            color="primary"
+                                            shape="rounded"
+                                        />
+                                    </Box>
+                                </>
+                            ) : null}
                         </Stack>
                     )}
                 </Stack>
@@ -386,5 +523,64 @@ export function StudentsPage() {
                 onClose={() => setGroupChangingStudent(null)}
             />
         </PageContainer>
+    );
+}
+
+function StudentMetricCard({
+                               icon,
+                               title,
+                               value,
+                               description,
+                               tone,
+                           }: {
+    icon: ReactNode;
+    title: string;
+    value: string | number;
+    description: string;
+    tone: 'primary' | 'success' | 'warning' | 'info';
+}) {
+    const theme = useTheme();
+
+    const color =
+        tone === 'success'
+            ? theme.palette.success.main
+            : tone === 'warning'
+                ? theme.palette.warning.main
+                : tone === 'info'
+                    ? theme.palette.info.main
+                    : theme.palette.primary.main;
+
+    return (
+        <SectionCard>
+            <Stack spacing={1.5}>
+                <Box
+                    sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 3,
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: alpha(color, 0.12),
+                        color,
+                    }}
+                >
+                    {icon}
+                </Box>
+
+                <Stack spacing={0.5}>
+                    <Typography variant="body2" color="text.secondary">
+                        {title}
+                    </Typography>
+
+                    <Typography variant="h5" fontWeight={900}>
+                        {value}
+                    </Typography>
+
+                    <Typography variant="caption" color="text.secondary">
+                        {description}
+                    </Typography>
+                </Stack>
+            </Stack>
+        </SectionCard>
     );
 }

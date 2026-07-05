@@ -11,6 +11,7 @@ import {
     CircularProgress,
     Divider,
     IconButton,
+    Pagination,
     Stack,
     Tooltip,
     Typography,
@@ -36,10 +37,13 @@ import { RowActions } from '../shared/ui/row-actions';
 import { SectionCard } from '../shared/ui/section-card';
 import { StatusChip } from '../shared/ui/status-chip';
 
+const PAGE_SIZE = 20;
+
 export function GroupsPage() {
     const { t } = useTranslation();
     const theme = useTheme();
 
+    const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
     const [createOpen, setCreateOpen] = useState(false);
     const [editingGroup, setEditingGroup] = useState<GroupDto | null>(null);
@@ -49,31 +53,37 @@ export function GroupsPage() {
     const queryParams = useMemo(
         () => ({
             search: search || undefined,
-            page: 1,
-            pageSize: 20,
+            page,
+            pageSize: PAGE_SIZE,
         }),
-        [search]
+        [search, page]
     );
 
     const groupsQuery = useGroupsQuery(queryParams);
     const toggleMutation = useToggleGroupActiveMutation();
 
     const groups = groupsQuery.data?.items ?? [];
+    const totalCount = groupsQuery.data?.totalCount ?? 0;
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
     const stats = useMemo(() => {
-        const active = groups.filter((group) => group.isActive).length;
-        const inactive = groups.length - active;
+        const activeOnPage = groups.filter((group) => group.isActive).length;
         const latestAdmission = groups.length
             ? Math.max(...groups.map((group) => group.admissionYear))
             : null;
 
         return {
-            total: groupsQuery.data?.totalCount ?? groups.length,
-            active,
-            inactive,
+            total: totalCount,
+            pageGroups: groups.length,
+            activeOnPage,
             latestAdmission,
         };
-    }, [groups, groupsQuery.data?.totalCount]);
+    }, [groups, totalCount]);
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        setPage(1);
+    };
 
     const handleToggleActive = async (group: GroupDto) => {
         await toggleMutation.mutateAsync({
@@ -109,19 +119,19 @@ export function GroupsPage() {
                 />
 
                 <GroupMetricCard
-                    icon={<ToggleOnOutlinedIcon />}
-                    title={t('groups.active')}
-                    value={stats.active}
-                    description={t('common.healthy')}
-                    tone="success"
+                    icon={<GroupsOutlinedIcon />}
+                    title={t('groups.pageGroups')}
+                    value={stats.pageGroups}
+                    description={t('groups.pageGroupsDescription')}
+                    tone="info"
                 />
 
                 <GroupMetricCard
-                    icon={<PauseCircleOutlineOutlinedIcon />}
-                    title={t('groups.inactive')}
-                    value={stats.inactive}
-                    description={stats.inactive > 0 ? t('common.attention') : t('common.healthy')}
-                    tone={stats.inactive > 0 ? 'warning' : 'success'}
+                    icon={<ToggleOnOutlinedIcon />}
+                    title={t('groups.activeOnPage')}
+                    value={stats.activeOnPage}
+                    description={t('groups.activeOnPageDescription')}
+                    tone="success"
                 />
 
                 <GroupMetricCard
@@ -149,9 +159,7 @@ export function GroupsPage() {
                                     </Typography>
 
                                     <StatusChip
-                                        label={t('groups.found', {
-                                            count: groupsQuery.data?.totalCount ?? 0,
-                                        })}
+                                        label={t('groups.found', { count: totalCount })}
                                         variant="info"
                                     />
                                 </Stack>
@@ -176,7 +184,7 @@ export function GroupsPage() {
                     <Box sx={{ p: 3 }}>
                         <EntityToolbar
                             searchValue={search}
-                            onSearchChange={setSearch}
+                            onSearchChange={handleSearchChange}
                             searchPlaceholder={t('groups.search')}
                         />
                     </Box>
@@ -220,7 +228,9 @@ export function GroupsPage() {
                                 gridTemplateColumns={desktopColumns}
                                 columns={
                                     <>
-                                        <EntityTableHeaderCell>{t('groups.group')}</EntityTableHeaderCell>
+                                        <EntityTableHeaderCell>
+                                            {t('groups.group')}
+                                        </EntityTableHeaderCell>
                                         <EntityTableHeaderCell align="center">
                                             {t('groups.year')}
                                         </EntityTableHeaderCell>
@@ -351,6 +361,28 @@ export function GroupsPage() {
                                     );
                                 })}
                             </EntityTable>
+
+                            {totalPages > 1 ? (
+                                <>
+                                    <Divider sx={{ my: 2 }} />
+
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            py: 1,
+                                        }}
+                                    >
+                                        <Pagination
+                                            page={page}
+                                            count={totalPages}
+                                            onChange={(_, value) => setPage(value)}
+                                            color="primary"
+                                            shape="rounded"
+                                        />
+                                    </Box>
+                                </>
+                            ) : null}
                         </Stack>
                     )}
                 </Stack>
