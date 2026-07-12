@@ -351,16 +351,19 @@ export function ZoneRulesSection({ zone, rooms, doors, rules, isLoading }: Props
                                                 </Stack>
 
                                                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                                    {rule.windows.map((window, index) => (
-                                                        <StatusChip
-                                                            key={index}
-                                                            label={`${dayNames[window.dayOfWeekIso]} ${window.startTime.slice(
-                                                                0,
-                                                                5
-                                                            )}–${window.endTime.slice(0, 5)}`}
-                                                            variant="default"
-                                                        />
-                                                    ))}
+                                                    {(rule.windows ?? []).length === 0 ? (
+                                                        <StatusChip label="No windows" variant="default" />
+                                                    ) : (
+                                                        (rule.windows ?? []).map((window, index) => (
+                                                            <StatusChip
+                                                                key={index}
+                                                                label={`${dayNames[window.dayOfWeekIso] ?? 'Day'} ${formatTime(
+                                                                    window.startTime
+                                                                )}–${formatTime(window.endTime)}`}
+                                                                variant="default"
+                                                            />
+                                                        ))
+                                                    )}
                                                 </Stack>
                                             </Stack>
                                         </Box>

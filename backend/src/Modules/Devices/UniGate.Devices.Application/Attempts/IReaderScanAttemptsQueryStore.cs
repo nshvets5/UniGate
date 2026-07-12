@@ -8,4 +8,8 @@ public interface IReaderScanAttemptsQueryStore
     Task<Result<PagedResult<ReaderScanAttemptDto>>> ListAsync(
         ReaderScanAttemptsQuery query,
         CancellationToken ct = default);
+
+    Task<Result<StudentAccessSummaryDto>> GetStudentSummaryAsync(
+        Guid studentId,
+        CancellationToken ct = default);
 }

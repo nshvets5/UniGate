@@ -11,6 +11,8 @@ public sealed class DevicesDbContext : DbContext
     public DbSet<ReaderDevice> ReaderDevices => Set<ReaderDevice>();
     public DbSet<ReaderScanAttempt> ReaderScanAttempts => Set<ReaderScanAttempt>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<MobileCredentialToken> MobileCredentialTokens =>
+        Set<MobileCredentialToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +53,35 @@ public sealed class DevicesDbContext : DbContext
 
             b.HasIndex(x => x.ReaderId);
             b.HasIndex(x => x.OccurredAt);
+        });
+
+        modelBuilder.Entity<MobileCredentialToken>(b =>
+        {
+            b.ToTable("mobile_credential_tokens");
+
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.StudentId)
+                .IsRequired();
+
+            b.Property(x => x.IssuedAt)
+                .IsRequired();
+
+            b.Property(x => x.ExpiresAt)
+                .IsRequired();
+
+            b.Property(x => x.UsedAt);
+
+            b.HasIndex(x => x.StudentId);
+
+            b.HasIndex(x => x.ExpiresAt);
+
+            b.HasIndex(x => new
+            {
+                x.StudentId,
+                x.ExpiresAt,
+                x.UsedAt
+            });
         });
 
         modelBuilder.Entity<OutboxMessage>(b =>

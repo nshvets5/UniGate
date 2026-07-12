@@ -7,6 +7,7 @@ using UniGate.Api.Extensions;
 using UniGate.Api.Files;
 using UniGate.Api.HealthChecks;
 using UniGate.Api.Middleware;
+using UniGate.Api.MobileCredentials;
 using UniGate.Api.Observability;
 using UniGate.Api.Outbox;
 using UniGate.Api.Outbox.Handlers.Audit;
@@ -25,6 +26,7 @@ using UniGate.Notifications.Infrastructure.DependencyInjection;
 using UniGate.Notifications.Infrastructure.Persistence;
 using UniGate.SharedKernel.Auth;
 using UniGate.SharedKernel.Files;
+using UniGate.SharedKernel.MobileCredentials;
 using UniGate.Timetable.Infrastructure.DependencyInjection;
 using UniGate.Timetable.Infrastructure.Persistence;
 using UniGate.Timetable.Infrastructure.Sync;
@@ -65,7 +67,7 @@ builder.Services.AddHealthChecks()
         (name: "notifications_db",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
         tags: new[] { "ready" })
-    .AddDbContextCheck<NotificationsDbContext>
+    .AddDbContextCheck<DevicesDbContext>
         (name: "devices_db",
         failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
         tags: new[] { "ready" })
@@ -135,6 +137,17 @@ builder.Services
     .AddAuditAuthorization()
     .AddDirectoryAuthorization()
     .AddAccessAuthorization();
+
+builder.Services
+    .AddOptions<MobileCredentialOptions>()
+    .Bind(
+        builder.Configuration.GetSection(
+            MobileCredentialOptions.SectionName))
+    .ValidateOnStart();
+
+builder.Services.AddScoped<
+    IMobileCredentialService,
+    JwtMobileCredentialService>();
 
 var app = builder.Build();
 

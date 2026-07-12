@@ -7,14 +7,17 @@ using UniGate.Devices.Application.Attempts;
 
 namespace UniGate.Api.Controllers;
 
-[Authorize(Policy = AccessAuthorizationExtensions.AccessAdmin)]
-public sealed class ReaderScanAttemptsController : ApiControllerBase
+[Authorize(
+    Policy = AccessAuthorizationExtensions.AccessAdmin)]
+public sealed class ReaderScanAttemptsController
+    : ApiControllerBase
 {
     private readonly ListReaderScanAttemptsUseCase _list;
 
     public ReaderScanAttemptsController(
         ListReaderScanAttemptsUseCase list,
-        IApiErrorMapper mapper) : base(mapper)
+        IApiErrorMapper mapper)
+        : base(mapper)
     {
         _list = list;
     }
@@ -32,6 +35,7 @@ public sealed class ReaderScanAttemptsController : ApiControllerBase
     {
         var query = new ReaderScanAttemptsQuery(
             ReaderId: null,
+            StudentId: null,
             IsAllowed: isAllowed,
             CredentialType: credentialType,
             CredentialValue: credentialValue,
@@ -40,7 +44,8 @@ public sealed class ReaderScanAttemptsController : ApiControllerBase
             Page: page,
             PageSize: pageSize);
 
-        return ToActionResult(await _list.ExecuteAsync(query, ct));
+        return ToActionResult(
+            await _list.ExecuteAsync(query, ct));
     }
 
     [HttpGet("api/readers/{readerId:guid}/attempts")]
@@ -57,6 +62,7 @@ public sealed class ReaderScanAttemptsController : ApiControllerBase
     {
         var query = new ReaderScanAttemptsQuery(
             ReaderId: readerId,
+            StudentId: null,
             IsAllowed: isAllowed,
             CredentialType: credentialType,
             CredentialValue: credentialValue,
@@ -65,6 +71,7 @@ public sealed class ReaderScanAttemptsController : ApiControllerBase
             Page: page,
             PageSize: pageSize);
 
-        return ToActionResult(await _list.ExecuteAsync(query, ct));
+        return ToActionResult(
+            await _list.ExecuteAsync(query, ct));
     }
 }

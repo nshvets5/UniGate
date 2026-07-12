@@ -10,31 +10,45 @@ using UniGate.Devices.Application.Scan;
 using UniGate.Devices.Infrastructure.Attempts;
 using UniGate.Devices.Infrastructure.Auth;
 using UniGate.Devices.Infrastructure.DeviceSelf;
+using UniGate.Devices.Infrastructure.MobileCredentials;
 using UniGate.Devices.Infrastructure.Monitoring;
 using UniGate.Devices.Infrastructure.Persistence;
 using UniGate.Devices.Infrastructure.Scan;
 using UniGate.Devices.Infrastructure.Stores;
+using UniGate.SharedKernel.MobileCredentials;
 
 namespace UniGate.Devices.Infrastructure.DependencyInjection;
 
-public static class DevicesModuleServiceCollectionExtensions
+public static class
+    DevicesModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddDevicesModule(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddDevicesModule(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         var cs = configuration.GetConnectionString("MainDb");
+
         if (string.IsNullOrWhiteSpace(cs))
-            throw new InvalidOperationException("Connection string 'MainDb' is not configured.");
+        {
+            throw new InvalidOperationException(
+                "Connection string 'MainDb' is not configured.");
+        }
 
         services.AddDbContext<DevicesDbContext>(opt =>
         {
             opt.UseNpgsql(cs, npgsql =>
             {
                 npgsql.EnableRetryOnFailure(5);
-                npgsql.MigrationsHistoryTable("__efmigrations_history", "devices");
+
+                npgsql.MigrationsHistoryTable(
+                    "__efmigrations_history",
+                    "devices");
             });
         });
 
-        services.AddScoped<IReaderDevicesStore, EfReaderDevicesStore>();
+        services.AddScoped<
+            IReaderDevicesStore,
+            EfReaderDevicesStore>();
 
         services.AddScoped<CreateReaderDeviceUseCase>();
         services.AddScoped<ListReaderDevicesUseCase>();
@@ -42,30 +56,58 @@ public static class DevicesModuleServiceCollectionExtensions
         services.AddScoped<UpdateReaderDeviceUseCase>();
         services.AddScoped<SetReaderDeviceActiveUseCase>();
 
-        services.AddScoped<IReaderScanStore, EfReaderScanStore>();
-        services.AddScoped<ICredentialResolver, DirectoryCredentialResolver>();
-        services.AddScoped<IAccessDecisionGateway, AccessDecisionGateway>();
+        services.AddScoped<
+            IReaderScanStore,
+            EfReaderScanStore>();
+
+        services.AddScoped<
+            ICredentialResolver,
+            DirectoryCredentialResolver>();
+
+        services.AddScoped<
+            IAccessDecisionGateway,
+            AccessDecisionGateway>();
 
         services.AddScoped<ReaderScanUseCase>();
 
-        services.AddScoped<IReaderAuthStore, EfReaderAuthStore>();
-        services.AddScoped<ISuspiciousAccessDetector, EfSuspiciousAccessDetector>();
+        services.AddScoped<
+            IReaderAuthStore,
+            EfReaderAuthStore>();
 
-        services.AddScoped<IReaderScanAttemptsQueryStore, EfReaderScanAttemptsQueryStore>();
+        services.AddScoped<
+            ISuspiciousAccessDetector,
+            EfSuspiciousAccessDetector>();
+
+        services.AddScoped<
+            IReaderScanAttemptsQueryStore,
+            EfReaderScanAttemptsQueryStore>();
+
         services.AddScoped<ListReaderScanAttemptsUseCase>();
+
+        services.AddScoped<GetStudentAccessSummaryUseCase>();
 
         services.AddScoped<GetReaderDeviceStatusUseCase>();
         services.AddScoped<RotateReaderApiKeyUseCase>();
 
-        services.AddScoped<IDeviceSelfStore, EfDeviceSelfStore>();
+        services.AddScoped<
+            IDeviceSelfStore,
+            EfDeviceSelfStore>();
 
         services.AddScoped<GetDeviceSelfUseCase>();
         services.AddScoped<SendDeviceHeartbeatUseCase>();
         services.AddScoped<ListDeviceOwnAttemptsUseCase>();
         services.AddScoped<GetDeviceDashboardUseCase>();
 
-        services.AddScoped<IReaderOfflineMonitorStore, EfReaderOfflineMonitorStore>();
-        services.AddHostedService<ReaderOfflineMonitorHostedService>();
+        services.AddScoped<
+            IReaderOfflineMonitorStore,
+            EfReaderOfflineMonitorStore>();
+
+        services.AddHostedService<
+            ReaderOfflineMonitorHostedService>();
+
+        services.AddScoped<
+            IMobileCredentialTokenStore,
+            EfMobileCredentialTokenStore>();
 
         return services;
     }

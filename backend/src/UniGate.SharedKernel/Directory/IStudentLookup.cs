@@ -10,5 +10,11 @@ public sealed record StudentRef(
 
 public interface IStudentLookup
 {
-    Task<Result<StudentRef>> FindByProfileIdAsync(Guid iamProfileId, CancellationToken ct = default);
+    Task<Result<StudentRef>> FindByProfileIdAsync(
+        Guid iamProfileId,
+        CancellationToken ct = default);
+
+    Task<Result<StudentRef>> FindByIdAsync(
+        Guid studentId,
+        CancellationToken ct = default);
 }
